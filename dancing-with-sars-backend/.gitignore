@@ -1,0 +1,18 @@
+# Environment variables and secrets (CRITICAL)
+.env
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+env/
+
+# Products directory (generated)
+products/
+
+# Cache directory
+.cache/
+
+# Sites configuration
+sites/

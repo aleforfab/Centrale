@@ -1,0 +1,15 @@
+# Environment variables
+.env*
+!.env.example
+
+# Node.js
+node_modules/
+.next/
+out/
+
+*.tsbuildinfo
+npm-debug.log*
+
+# IDE files
+.vscode/
+.idea/
