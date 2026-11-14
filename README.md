@@ -95,6 +95,12 @@ PRODUCTS_DIR=/srv/dancing-sars/products python -m nisar.cli verify --site demo-f
 The generated site's caveat states: *Synthetic fixture data: not a real
 observation, not a real change, and not evidence of anything.*
 
+## Working with other people
+
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before your first branch. It covers the
+lane split, the shared files that need a heads-up, the lockfile recipe, and the
+code-freeze rule. CI now runs on every branch and every pull request.
+
 ## Tests and checks
 
 ```bash

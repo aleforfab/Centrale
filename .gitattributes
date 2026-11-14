@@ -1,0 +1,28 @@
+# Normalise line endings so a Windows editor cannot turn every untouched line
+# into a merge conflict. Text is stored as LF in the repository; Git converts on
+# checkout for platforms that need it.
+* text=auto eol=lf
+
+# Scripts that must keep a specific ending to run.
+*.sh text eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets: never diff, never merge, never normalise.
+*.h5 binary
+*.hdf5 binary
+*.tif binary
+*.tiff binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.pdf binary
+*.npz binary
+*.zip binary
+*.gz binary
+
+# Lockfiles are regenerated, not merged. A textual merge here produces a broken
+# dependency tree, so mark it accordingly (see CONTRIBUTING.md for the recipe).
+package-lock.json -diff linguist-generated=true
