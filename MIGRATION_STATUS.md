@@ -21,6 +21,13 @@ No item reaches the last three labels.
 | Base commit (import) | `fc77dc7033fe7a3b812073220afe0f53902ccf67` |
 | Fix commit | `7af1c20394aa9dbf8eece3998575b3be0d5eda86` |
 | Documentation commit | `46117876687e41aa843c20f6c7ca15de5d75a90f` |
+| Cloud checklist commit | `2c66f03504f665ec2fec058c6e1512896f196b76` |
+| Collaboration guardrails commit | `c31a8e5cd46c9cda23038c2893292d5e0744d3b4` |
+| Merged to `main` via PR #1 | merge commit `3ae4123ae8402d5295280e193ba77836ee4cbc8f` |
+
+`main` is now the deployment baseline. Contributors branch from it; this session
+branch continues to carry follow-up work for review through separate pull
+requests.
 
 `main` was not modified, and nothing was force-pushed.
 

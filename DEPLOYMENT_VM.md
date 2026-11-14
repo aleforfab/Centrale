@@ -22,21 +22,29 @@ Verified previously through SSH:
 
 Do not reformat the disk, recreate the VM, or redo IAM.
 
-## Step 1 — Clone Centrale and confirm the commit
+## Step 1 — Clone Centrale and confirm the baseline
 
-Run on the VM after the migration commit exists:
+The application work was merged into `main` through pull request #1 (merge commit
+`3ae4123`). Deploy from `main`, not from an agent session branch.
 
 ```bash
 cd ~
-git clone --branch arena/d252cdc7-centrale \
-  https://github.com/aleforfab/Centrale.git centrale
+git clone https://github.com/aleforfab/Centrale.git centrale
 cd centrale
 git log --oneline -3
 git rev-parse HEAD
+git merge-base --is-ancestor 3ae4123 HEAD && echo "baseline present" || echo "BASELINE MISSING"
 ```
 
-`git rev-parse HEAD` must print the commit ID announced at the end of the
-migration. If it prints something else, stop and report it.
+Expected: `baseline present`. `git rev-parse HEAD` will print whatever the current
+tip of `main` is — teammates may have merged further work since. **Record that
+ID** in your notes, because it is the exact code you are running.
+
+If the check prints `BASELINE MISSING`, stop and report it: you would be deploying
+an older tree than the one that was verified.
+
+Update later with `git pull --ff-only`, which refuses to create a surprise merge
+commit on the VM.
 
 ## Step 2 — Decide the Python interpreter before installing anything
 
