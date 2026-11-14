@@ -21,7 +21,7 @@
 ## Scope not done / why
 
 - No real ASF/Earthdata fetch or end-to-end product build was run. The brief places that credentialed, multi-GB operation on the VM; this frontend hand-in does not claim it succeeded.
-- The specified feature branch name could not be used because this session is pinned to `arena/7f70de26-centrale`; the draft PR will originate from that active branch.
+- The specified feature branch name could not be used because this session is pinned to `arena/7f70de26-centrale`; the draft PR originates from that active branch.
 
 ## Files changed
 
