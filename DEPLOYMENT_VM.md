@@ -2,7 +2,11 @@
 
 **Nothing in this file has been executed on the VM yet.** It is the plan that
 follows the migration. Steps are ordered so each one can be verified before the
-next. The migration blocker is described in [`MIGRATION_STATUS.md`](MIGRATION_STATUS.md).
+next. Current state: [`MIGRATION_STATUS.md`](MIGRATION_STATUS.md).
+
+Console-side work (billing, firewall, IAM, snapshots, IP, costs) lives in
+[`GCP_CHECKLIST.md`](GCP_CHECKLIST.md) and is owned by the project's Google Cloud
+lead. This file starts at SSH.
 
 ## Already completed on the VM — do not repeat
 

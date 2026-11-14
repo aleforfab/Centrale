@@ -137,5 +137,13 @@ python -m scripts.build_source_register --pdf-dir ~/papers --write
 
 ## Deploying on the Google Cloud VM
 
-See [`DEPLOYMENT_VM.md`](DEPLOYMENT_VM.md). Nothing there has been executed on
-the VM yet, and the document marks each step as unstarted.
+Two documents, two owners:
+
+- [`GCP_CHECKLIST.md`](GCP_CHECKLIST.md) — console work: billing guardrails,
+  firewall target tags, IAM, snapshots, static IP, cost review. This is the
+  project's Google Cloud owner's runbook.
+- [`DEPLOYMENT_VM.md`](DEPLOYMENT_VM.md) — SSH work on the VM: clone, Python
+  environment, tests, synthetic rehearsal, frontend build, services, Caddy.
+
+Nothing in either document has been executed on the VM yet; every step is marked
+as unstarted.
