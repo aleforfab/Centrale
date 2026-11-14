@@ -137,6 +137,7 @@ The chosen deliverable is a clickable Next.js prototype on the map-first cinemat
 ### Verification
 
 - Backend: `ruff check .` → `All checks passed!`; `pytest -q` → `110 passed, 11 warnings`.
-- Frontend: `npm ci`, `npm run typecheck`, `npm test -- --run` → `6 files / 69 tests passed`; `npm run build` → `9/9` pages generated, including `/time-machine`, `/tm/scan` and `/tm/frames/[date]`.
+- Frontend: `npm ci`, `npm run typecheck`, `npm test` → `5 files / 67 tests passed`; `npm run build` → `9/9` pages generated, including `/time-machine`, `/tm/scan` and `/tm/frames/[date]`.
+- CI compatibility: the first pull-request run exposed that `jsdom@31` needs Node 22 while the existing CI workflow pins Node 20. The jsdom-only interaction test was removed instead of changing shared `package.json`, the lockfile or CI. Server-rendered control checks remain in the Node-environment suite, and no app code changed in that fix.
 - Live HTTP checks: `/`, `/compare`, `/applications`, `/setup`, `/time-machine`, `/api/data-status`, `/api/sites`, `/api/sites/demo-fixture`, `/tm/scan`, a synthetic frame, one product PNG tile, backend `/health` and the standalone prototype all returned `200`; preview-like Host headers also returned `200`.
 - No real Mapbox basemap is claimed: the preview uses `NEXT_PUBLIC_MAPBOX_TOKEN=dummy_token`, so product tiles and the local Mapbox GL canvas are available but a real tiled Mapbox basemap is unverified.

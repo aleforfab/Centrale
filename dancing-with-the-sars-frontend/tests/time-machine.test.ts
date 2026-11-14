@@ -1,6 +1,9 @@
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { POST as scanPost } from "@/app/tm/scan/route";
 import { GET as frameGet } from "@/app/tm/frames/[date]/route";
+import { TimeReview } from "@/components/TimeReview";
 import { buildComparison } from "@/lib/comparison";
 import {
   DEFAULT_BBOX,
@@ -137,5 +140,30 @@ describe("Time Machine scan contract", () => {
       { params: { date: "2026-01-01" } },
     );
     expect(unknown.status).toBe(404);
+  });
+});
+
+describe("TimeReview server-rendered controls", () => {
+  it("shows the slider, playback control, exact-date modes and synthetic notice", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(TimeReview, { scan: scanResult, loading: false }),
+    );
+    expect(html).toContain("Observation date timeline");
+    expect(html).toContain("Play evolution");
+    expect(html).toContain("One event date");
+    expect(html).toContain("Two dates to compare");
+    expect(html).toContain("not a real observation");
+  });
+
+  it("disables playback when that feature was not selected", () => {
+    const withoutPlayback: ScanResult = {
+      ...scanResult,
+      features: scanResult.features.filter((item) => item !== "playback"),
+    };
+    const html = renderToStaticMarkup(
+      React.createElement(TimeReview, { scan: withoutPlayback, loading: false }),
+    );
+    expect(html).toContain("Enable “Playback” in feature choices");
+    expect(html).toContain("disabled");
   });
 });
