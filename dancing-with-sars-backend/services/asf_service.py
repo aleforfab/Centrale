@@ -3,9 +3,51 @@ from typing import Any
 
 import asf_search as asf
 
+from nisar import cache
 from nisar.catalog import bbox_to_wkt
 from nisar.config import Config
 from nisar.naming import parse_granule_name
+
+
+def _catalog_params(
+    bbox: list[float],
+    start: date,
+    end: date,
+    maturity: str,
+    max_results: int,
+) -> dict[str, Any]:
+    """Canonical parameters used to derive the catalog cache key."""
+    return {
+        "bbox": [round(float(value), 6) for value in bbox],
+        "start": start.isoformat(),
+        "end": end.isoformat(),
+        "maturity": maturity,
+        "max_results": max_results,
+    }
+
+
+def catalog_cache_key(
+    bbox: list[float],
+    start: date,
+    end: date,
+    maturity: str = "PROVISIONAL",
+    max_results: int = 50,
+) -> str:
+    return cache.make_key("catalog", _catalog_params(bbox, start, end, maturity, max_results))
+
+
+def invalidate_catalog_cache(
+    bbox: list[float],
+    start: date,
+    end: date,
+    maturity: str = "PROVISIONAL",
+    max_results: int = 50,
+) -> bool:
+    """Force the next identical search to hit ASF again."""
+    return cache.invalidate(
+        Config.get_catalog_cache_dir(),
+        catalog_cache_key(bbox, start, end, maturity, max_results),
+    )
 
 
 def search_asf_granules(
@@ -128,3 +170,43 @@ def search_nisar_granules(
             "asf_url": f"https://search.asf.alaska.edu/#/?granule={name}",
         })
     return granules
+
+
+def search_nisar_granules_cached(
+    bbox: list[float],
+    start: date,
+    end: date,
+    maturity: str = "PROVISIONAL",
+    max_results: int = 50,
+) -> dict[str, Any]:
+    """Cache-aside live ASF search.
+
+    A fresh cached response is returned without touching the network. On a
+    miss (or expired TTL) the live ``search_nisar_granules`` call runs and its
+    result is cached. If ASF is unavailable, stale cached results are served
+    with ``stale=True`` so the UI degrades instead of blanking.
+    """
+    # Validate even on a cache hit so malformed queries are never silently served.
+    if start > end:
+        raise ValueError("start must be on or before end")
+    if maturity not in {"PROVISIONAL", "BETA"}:
+        raise ValueError("maturity must be PROVISIONAL or BETA")
+    if not 1 <= max_results <= 500:
+        raise ValueError("max_results must be between 1 and 500")
+
+    key = catalog_cache_key(bbox, start, end, maturity, max_results)
+    granules, meta = cache.read_or_fetch(
+        Config.get_catalog_cache_dir(),
+        key,
+        Config.LIVE_FETCH_TTL_SECONDS,
+        lambda: search_nisar_granules(bbox, start, end, maturity, max_results),
+        allow_stale=Config.LIVE_FETCH_STALE_ON_ERROR,
+    )
+    response: dict[str, Any] = {
+        "granules": granules,
+        "count": len(granules),
+        "maturity": maturity,
+        "source": "ASF live catalog" if not meta["cached"] else "ASF catalog cache",
+        **meta,
+    }
+    return response

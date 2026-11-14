@@ -7,6 +7,13 @@ run a new Earth Engine or Sentinel-1 analysis from the interface. When no site
 has been built, the frontend shows an empty-state message rather than presenting
 fallback results as NISAR.
 
+`GET /api/nisar/search` now caches its live ASF catalog results, and
+`POST /api/nisar/fetch` builds a site from live granules in a background job
+(enabled by default; `ENABLE_LIVE_FETCH=false` disables it); poll
+`/api/nisar/fetch/jobs/{job_id}` for progress. See
+[`LIVE_FETCH.md`](LIVE_FETCH.md) before using that path in a demo: it downloads
+whole granules and needs Earthdata credentials.
+
 The repository does not currently include a curated site configuration or a
 real built product tree. Select a study region, then use ASF search to identify
 a stack and matching dates before creating a site YAML file.

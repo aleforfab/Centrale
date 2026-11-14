@@ -63,6 +63,39 @@ class SARQueryRequest(DateRangeModel):
     _validate_bbox = field_validator("bbox")(validate_bbox)
 
 
+class LiveFetchRequest(BaseModel):
+    """Request body for on-demand NISAR product fetching (``POST /api/nisar/fetch``)."""
+
+    bbox: list[float] = Field(..., description="[min_lon, min_lat, max_lon, max_lat]")
+    start_date: date
+    end_date: date
+    maturity: str = Field(default="PROVISIONAL", pattern="^(PROVISIONAL|BETA)$")
+    polarizations: list[str] = Field(
+        default_factory=lambda: ["HH"],
+        min_length=1,
+        max_length=4,
+        description="Requested polarizations, e.g. ['HH']",
+    )
+    max_granules: int = Field(default=6, ge=2, le=20)
+    refresh: bool = Field(default=False, description="Ignore cached products and refetch")
+
+    _validate_bbox = field_validator("bbox")(validate_bbox)
+
+    @field_validator("polarizations")
+    @classmethod
+    def validate_polarizations(cls, value: list[str]) -> list[str]:
+        normalized = sorted({pol.upper() for pol in value})
+        if not set(normalized).issubset({"HH", "HV", "VH", "VV"}):
+            raise ValueError("polarizations must be HH, HV, VH, and/or VV")
+        return normalized
+
+    @model_validator(mode="after")
+    def validate_dates(self) -> "LiveFetchRequest":
+        if self.start_date >= self.end_date:
+            raise ValueError("start_date must be earlier than end_date")
+        return self
+
+
 class ObservationTileRequest(BaseModel):
     bbox: list[float] = Field(..., description="[min_lon, min_lat, max_lon, max_lat]")
     date: date
