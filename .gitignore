@@ -1,0 +1,33 @@
+# Environment variables and secrets (CRITICAL)
+.env
+credentials.json
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+env/
+
+# IDE files
+.vscode/
+.idea/
+
+# Node.js
+node_modules/
+.next/
+out/
+.env*
+!.env.example
+npm-debug.log*
+
+*.tsbuildinfo
+
+# Products directory (generated)
+products/
+
+# Cache directory
+.cache/
+
+# Sites configuration (if contains secrets)
+sites/
