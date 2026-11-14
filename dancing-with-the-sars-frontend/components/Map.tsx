@@ -5,6 +5,7 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { ProductLayer } from "@/lib/types";
 import { api } from "@/lib/api";
+import { resolveTileUrl } from "@/lib/tileUrl";
 import { getMapboxToken, hasMapboxToken } from "@/lib/mapboxToken";
 
 export type MapView = "optical" | "sar";
@@ -57,9 +58,7 @@ function syncProductLayers(map: mapboxgl.Map, layers: ProductLayer[]) {
   layers.forEach((layer, index) => {
     const sourceId = `nisar-source-${layer.id}`;
     const layerId = `nisar-layer-${layer.id}`;
-    const tileUrl = api.baseUrl
-      ? new URL(layer.tile_url_template, `${api.baseUrl}/`).toString()
-      : new URL(layer.tile_url_template, window.location.origin).toString();
+    const tileUrl = resolveTileUrl(layer.tile_url_template, api.baseUrl);
     const source = map.getSource(sourceId) as mapboxgl.RasterTileSource | undefined;
     if (source) {
       source.setTiles([tileUrl]);
