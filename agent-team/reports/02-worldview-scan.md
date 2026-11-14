@@ -3,9 +3,9 @@
 ## Branch / PR / SHAs
 
 - Branch: `arena/7f70de26-centrale` (session-pinned active branch). The brief names `feat/worldview-time-machine`, but that branch is not the active session branch; branch switching/creation is not permitted in this session. Work remains on the pinned branch.
-- PR: pending draft PR creation from the pinned branch into `main`.
+- PR: https://github.com/aleforfab/Centrale/pull/8 (draft, into `main`; from the pinned active branch).
 - Base SHA: `037f42c1e6156d6ec92ebd6d46cb058ec522cc21` (`origin/main`).
-- HEAD SHA: `dc3456bc66516f4fc3fbcb68e3f0e45b660ef6e2` (implementation commit; report will follow in a separate commit).
+- Implementation/test HEAD SHA: `dc3456bc66516f4fc3fbcb68e3f0e45b660ef6e2` (subsequent commits add only this report and the PR link).
 
 ## Scope done
 
