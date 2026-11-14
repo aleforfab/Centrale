@@ -107,23 +107,23 @@ def smooth_linear(
         # All pixels valid - simple boxcar average
         smoothed = ndimage.uniform_filter(power, size=kernel_size)
     else:
-        # NaN-aware smoothing
-        # We'll use a custom approach: sum(power * valid) / max(sum(valid), 1)
-        # to avoid division by zero
-        power_float = power.astype(np.float64)
+        # NaN-aware smoothing: normalized convolution.
+        # Invalid pixels must be replaced by 0.0 *before* the boxcar sum.
+        # Multiplying NaN by 0 still yields NaN, which would poison every
+        # neighbourhood that touches an invalid pixel and silently erase most
+        # of the valid data.
+        power_float = np.where(valid, power, 0.0).astype(np.float64)
         valid_float = valid.astype(np.float64)
-        
-        # Compute numerator: sum(power * valid)
-        numerator = ndimage.uniform_filter(power_float * valid_float, size=kernel_size)
-        
-        # Compute denominator: sum(valid)
+
+        # Mean of the valid values in each window (uniform_filter returns means).
+        numerator = ndimage.uniform_filter(power_float, size=kernel_size)
         denominator = ndimage.uniform_filter(valid_float, size=kernel_size)
-        
-        # Avoid division by zero
-        denominator[denominator == 0] = 1
-        
-        # Compute smoothed power
-        smoothed = (numerator / denominator).astype(np.float32)
+
+        # A window with no valid pixels has no defined mean; keep it NaN so the
+        # gap propagates instead of becoming a plausible-looking zero.
+        smoothed = np.full(power.shape, np.nan, dtype=np.float64)
+        np.divide(numerator, denominator, out=smoothed, where=denominator > 0)
+        smoothed = smoothed.astype(np.float32)
     
     return smoothed
 
