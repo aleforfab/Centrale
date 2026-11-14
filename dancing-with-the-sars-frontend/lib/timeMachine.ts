@@ -7,7 +7,9 @@ export type FeatureId =
   | "timeseries"
   | "provenance"
   | "playback"
-  | "compare";
+  | "compare"
+  | "normalization"
+  | "insar";
 
 export interface FeatureOption {
   id: FeatureId;
@@ -50,6 +52,16 @@ export const FEATURE_OPTIONS: FeatureOption[] = [
     id: "compare",
     label: "Two-date compare",
     description: "Enable exact before/after date selection with a reveal slider.",
+  },
+  {
+    id: "normalization",
+    label: "Angle normalization (proposed)",
+    description: "Show the proposed incidence-angle correction panel. It needs real per-date geometry metadata and is not applied to procedural frames.",
+  },
+  {
+    id: "insar",
+    label: "Interferometry (proposed)",
+    description: "Show the proposed deformation/coherence panel. It needs phase-capable products and is not available from the current GCOV backscatter pipeline.",
   },
 ];
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import {
@@ -8,14 +8,14 @@ import {
   clampReveal,
   observationPolarizations,
   processingIdentity,
-  revealFromPointer,
   usablePairs,
 } from "@/lib/comparison";
 import type { SiteManifest } from "@/lib/types";
+import { getMapboxToken, hasMapboxToken } from "@/lib/mapboxToken";
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
-mapboxgl.accessToken = MAPBOX_TOKEN || "pk.prototype-no-token";
-const HAS_MAPBOX_TOKEN = /^pk\.[A-Za-z0-9._-]{20,}$/.test(MAPBOX_TOKEN);
+const MAPBOX_TOKEN = getMapboxToken();
+mapboxgl.accessToken = MAPBOX_TOKEN;
+const HAS_MAPBOX_TOKEN = hasMapboxToken();
 
 const FALLBACK_STYLE = {
   version: 8,
@@ -49,9 +49,7 @@ function camerasMatch(a: mapboxgl.Map, b: mapboxgl.Map): boolean {
 
 export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProps) {
   const [reveal, setReveal] = useState(50);
-  const [dragging, setDragging] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
-  const wrapper = useRef<HTMLDivElement>(null);
   const beforeContainer = useRef<HTMLDivElement>(null);
   const afterContainer = useRef<HTMLDivElement>(null);
   const beforeMap = useRef<mapboxgl.Map | null>(null);
@@ -162,12 +160,6 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
     }
   }, [beforeLayerId, afterLayerId, manifest.layers]);
 
-  const updateFromPointer = useCallback((clientX: number) => {
-    const box = wrapper.current?.getBoundingClientRect();
-    if (!box) return;
-    setReveal(revealFromPointer(clientX, box.left, box.width));
-  }, []);
-
   if (!result.ok) {
     return (
       <section
@@ -192,23 +184,7 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
   return (
     <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
       <section className="xl:col-span-8">
-        <div
-          ref={wrapper}
-          className="relative h-[26rem] overflow-hidden rounded-lg border border-slate-700 bg-slate-950 sm:h-[32rem]"
-          onPointerDown={(event) => {
-            setDragging(true);
-            event.currentTarget.setPointerCapture(event.pointerId);
-            updateFromPointer(event.clientX);
-          }}
-          onPointerMove={(event) => {
-            if (dragging) updateFromPointer(event.clientX);
-          }}
-          onPointerUp={(event) => {
-            setDragging(false);
-            event.currentTarget.releasePointerCapture(event.pointerId);
-          }}
-          onPointerCancel={() => setDragging(false)}
-        >
+        <div className="relative h-[26rem] overflow-hidden rounded-lg border border-slate-700 bg-slate-950 sm:h-[32rem]">
           <>
             <div className="absolute inset-0">
               <div ref={beforeContainer} className="h-full w-full" data-testid="map-before" />
@@ -282,8 +258,9 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
           />
         </label>
         <p className="mt-2 text-[11px] leading-5 text-slate-500">
-          Drag on the map or use the slider. Both views share one camera so the dates stay aligned. Apparent
-          brightness also depends on the display stretch applied to each layer, not only on the surface.
+          Use the slider below to reveal the later date; clicking or dragging on the imagery does not change the
+          view. Apparent brightness also depends on the display stretch applied to each layer, not only on the
+          surface.
         </p>
       </section>
 
@@ -329,8 +306,8 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
               <dd className="text-slate-200">{availablePols.join(", ") || "none"}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Curated pairs</dt>
-              <dd className="text-slate-200">{pairs.map((item) => item.id).join(", ") || "none"}</dd>
+              <dt className="text-slate-500">Installed pair labels</dt>
+              <dd className="text-slate-200">{pairs.map((item) => item.label).join(", ") || "none"}</dd>
             </div>
           </dl>
         </article>

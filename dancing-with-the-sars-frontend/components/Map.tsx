@@ -5,6 +5,7 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { ProductLayer } from "@/lib/types";
 import { api } from "@/lib/api";
+import { getMapboxToken, hasMapboxToken } from "@/lib/mapboxToken";
 
 export type MapView = "optical" | "sar";
 
@@ -15,9 +16,9 @@ interface MapProps {
   setView: (view: MapView) => void;
 }
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
-mapboxgl.accessToken = MAPBOX_TOKEN || "pk.prototype-no-token";
-const HAS_MAPBOX_TOKEN = /^pk\.[A-Za-z0-9._-]{20,}$/.test(MAPBOX_TOKEN);
+const MAPBOX_TOKEN = getMapboxToken();
+mapboxgl.accessToken = MAPBOX_TOKEN;
+const HAS_MAPBOX_TOKEN = hasMapboxToken();
 
 const FALLBACK_STYLE = (dark: boolean): mapboxgl.Style =>
   ({

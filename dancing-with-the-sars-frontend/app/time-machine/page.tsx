@@ -40,8 +40,10 @@ function FeatureCheck() {
     ["Playback / speed", "ready"],
     ["One event date or two exact dates", "ready"],
     ["Exact-date refusal rule", "ready"],
-    ["Real NISAR live fetch", "endpoint exists · not run here"],
-    ["Tiled Mapbox basemap", "real token needed"],
+    ["Real NISAR live fetch", "endpoint exists · credentials needed"],
+    ["Tiled Mapbox basemap", "public token committed"],
+    ["Angle normalization", "proposed · needs real geometry metadata"],
+    ["Interferometry", "proposed · needs phase-capable products"],
   ];
   return (
     <ul className="tm-checklist">
@@ -114,6 +116,13 @@ export default function TimeMachinePage() {
     }
     if (features.length === 0) {
       setError("Choose at least one feature to visualise.");
+      return;
+    }
+    if (
+      !SCAN_DATES.includes(beforeDate as (typeof SCAN_DATES)[number]) ||
+      !SCAN_DATES.includes(afterDate as (typeof SCAN_DATES)[number])
+    ) {
+      setError("Choose exact installed dates. No substitute date is used.");
       return;
     }
     if (dateMode === "pair") {
@@ -207,19 +216,36 @@ export default function TimeMachinePage() {
             </div>
 
             {dateMode === "pair" && (
-              <div className="tm-controls__row" style={{ marginTop: 12 }}>
-                <label>
-                  Before date
-                  <select value={beforeDate} onChange={(event) => setBeforeDate(event.target.value)} disabled={loading}>
-                    {SCAN_DATES.map((date) => <option key={date} value={date}>{date}</option>)}
-                  </select>
-                </label>
-                <label>
-                  After date
-                  <select value={afterDate} onChange={(event) => setAfterDate(event.target.value)} disabled={loading}>
-                    {SCAN_DATES.map((date) => <option key={date} value={date}>{date}</option>)}
-                  </select>
-                </label>
+              <div className="tm-calendar" style={{ marginTop: 12, marginBottom: 0 }}>
+                <div className="tm-calendar__row">
+                  <label className="tm-calendar__label">
+                    Before date
+                    <input
+                      type="date"
+                      value={beforeDate}
+                      min={SCAN_DATES[0]}
+                      max={SCAN_DATES[SCAN_DATES.length - 1]}
+                      onChange={(event) => setBeforeDate(event.target.value)}
+                      disabled={loading}
+                      aria-label="Before date"
+                    />
+                  </label>
+                  <label className="tm-calendar__label">
+                    After date
+                    <input
+                      type="date"
+                      value={afterDate}
+                      min={SCAN_DATES[0]}
+                      max={SCAN_DATES[SCAN_DATES.length - 1]}
+                      onChange={(event) => setAfterDate(event.target.value)}
+                      disabled={loading}
+                      aria-label="After date"
+                    />
+                  </label>
+                </div>
+                <div className="tm-chip-row" aria-label="Exact installed dates">
+                  {SCAN_DATES.map((date) => <span key={date} className="tm-chip">{date}</span>)}
+                </div>
               </div>
             )}
 
@@ -335,6 +361,21 @@ export default function TimeMachinePage() {
                     a substitute date, polarization or difference/change-mask layer.
                   </OutputBlock>
                 )}
+                {scan.features.includes("normalization") && (
+                  <OutputBlock title="Angle normalization · proposed">
+                    Real acquisitions need a per-pixel local incidence angle or gamma-to-sigma factor, a common
+                    reference geometry, and a regression test on two real dates. No correction is applied to
+                    procedural frames, and no normalised result is claimed here.
+                  </OutputBlock>
+                )}
+                {scan.features.includes("insar") && (
+                  <OutputBlock title="Interferometry · proposed">
+                    The current pipeline reads detected GCOV backscatter, which does not preserve interferometric
+                    phase. A real feature needs phase-capable SLC/GUNW-style products, coregistration, DEM and
+                    baseline handling, coherence, unwrapping and scientific review. No deformation result is
+                    computed here.
+                  </OutputBlock>
+                )}
               </div>
             )}
           </section>
@@ -367,8 +408,10 @@ export default function TimeMachinePage() {
             )}
             <p className="tm-muted" style={{ marginTop: 10 }}>
               The backend’s <code>POST /api/nisar/fetch</code> accepts an arbitrary bbox, start/end dates, maturity,
-              polarizations and max granules. In this preview live fetch is off and no Earthdata credentials are
-              configured, so the scan button returns procedural frames instead of real NISAR products.
+              polarizations and max granules. The Time Machine scan button does not call that endpoint; it returns
+              procedural SVG frames. A real live build needs Earthdata credentials and the operator API, and is not
+              attempted here.
+              {status && status.live_fetch_enabled === false && " Live fetch is currently disabled for this backend."}
             </p>
           </section>
 

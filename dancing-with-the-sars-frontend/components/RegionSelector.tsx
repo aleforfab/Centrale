@@ -5,11 +5,12 @@ import type { FeatureCollection, Polygon } from "geojson";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { DEFAULT_BBOX, isValidBbox } from "@/lib/timeMachine";
+import { getMapboxToken, hasMapboxToken } from "@/lib/mapboxToken";
 
 export type Bbox = [number, number, number, number];
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
-const HAS_MAPBOX_TOKEN = /^pk\.[A-Za-z0-9._-]{20,}$/.test(MAPBOX_TOKEN);
+const MAPBOX_TOKEN = getMapboxToken();
+const HAS_MAPBOX_TOKEN = hasMapboxToken();
 
 const FALLBACK_STYLE = {
   version: 8,
@@ -23,7 +24,7 @@ const FALLBACK_STYLE = {
   ],
 } as unknown as mapboxgl.Style;
 
-const BASEMAP_STYLE = "mapbox://styles/mapbox/dark-v11";
+const BASEMAP_STYLE = "mapbox://styles/mapbox/satellite-streets-v12";
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
@@ -114,7 +115,7 @@ export function RegionSelector({ initialBbox = DEFAULT_BBOX, onChange }: RegionS
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    mapboxgl.accessToken = MAPBOX_TOKEN || "pk.prototype-no-token";
+    mapboxgl.accessToken = MAPBOX_TOKEN;
     fallbackAppliedRef.current = !HAS_MAPBOX_TOKEN;
 
     let map: mapboxgl.Map;

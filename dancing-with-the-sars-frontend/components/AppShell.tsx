@@ -58,12 +58,6 @@ export function AppShell({
           <SiteNav current={current} />
           <div className="redesign-content">{children}</div>
         </div>
-
-        <footer className="app-shell__footer">
-          Prototype scans use procedural frames, not real observations. Installed product views show only what an
-          operator has built, and backscatter change is a measured difference — not a cause or a validated
-          scientific result.
-        </footer>
       </div>
     </div>
   );
