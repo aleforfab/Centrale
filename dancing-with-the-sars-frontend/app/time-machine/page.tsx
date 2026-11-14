@@ -1,434 +1,270 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
-import { FeatureChoices } from "@/components/FeatureChoices";
 import { RegionSelector, type Bbox } from "@/components/RegionSelector";
 import { TimeReview } from "@/components/TimeReview";
+import { WorldviewReview } from "@/components/WorldviewReview";
+import { DEFAULT_BBOX, SCAN_DATES, SYNTHETIC_NOTICE, formatBbox, isValidBbox, type ScanResult } from "@/lib/timeMachine";
 import {
-  DEFAULT_BBOX,
-  DEFAULT_FEATURES,
-  DEFAULT_POL,
-  SCAN_DATES,
-  SYNTHETIC_NOTICE,
-  featureLabel,
-  formatBbox,
-  isValidBbox,
-  type FeatureId,
-  type ScanResult,
-} from "@/lib/timeMachine";
-import type { DataStatus } from "@/lib/types";
+  cancelFetchJob,
+  checkLiveFetchAvailable,
+  fetchManifest,
+  getFetchJob,
+  liveFetchErrorMessage,
+  LiveFetchError,
+  startLiveFetch,
+  wait,
+  type FetchJob,
+} from "@/lib/liveFetch";
+import type { DataStatus, SiteManifest } from "@/lib/types";
 
-type PrototypeDataStatus = DataStatus & { live_fetch_enabled?: boolean };
+type ScanState = "idle" | "queued" | "running" | "succeeded" | "failed" | "cancelled" | "credential-error" | "size-limit" | "demo";
 
-function OutputBlock({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="tm-output">
-      <h3>{title}</h3>
-      <div className="tm-muted">{children}</div>
-    </div>
-  );
-}
+const LIVE_REQUEST = {
+  start_date: "2026-08-13",
+  end_date: "2026-10-01",
+  maturity: "PROVISIONAL" as const,
+  polarizations: ["HH", "HV"],
+  max_granules: 6,
+  refresh: false,
+};
 
-function FeatureCheck() {
-  const rows: Array<[string, string]> = [
-    ["Mapbox region selection", "ready"],
-    ["Start scan from selected bbox", "ready"],
-    ["Choices for selected features", "ready"],
-    ["Timeline slider", "ready"],
-    ["Playback / speed", "ready"],
-    ["One event date or two exact dates", "ready"],
-    ["Exact-date refusal rule", "ready"],
-    ["Real NISAR live fetch", "endpoint exists · credentials needed"],
-    ["Tiled Mapbox basemap", "public token committed"],
-    ["Angle normalization", "proposed · needs real geometry metadata"],
-    ["Interferometry", "proposed · needs phase-capable products"],
-  ];
-  return (
-    <ul className="tm-checklist">
-      {rows.map(([label, state]) => (
-        <li key={label}>
-          <span>{label}</span>
-          <em className={state === "ready" ? "tm-checklist--ready" : ""}>{state}</em>
-        </li>
-      ))}
-    </ul>
-  );
+function stateText(state: ScanState): string {
+  return ({
+    idle: "Ready · live ASF scan",
+    queued: "Queued",
+    running: "Fetching and building products",
+    succeeded: "Products built · inspect exact acquisitions",
+    failed: "Fetch failed",
+    cancelled: "Fetch cancelled",
+    "credential-error": "Earthdata credentials required",
+    "size-limit": "Configured size limit reached",
+    demo: "Procedural demo · not observations",
+  })[state];
 }
 
 export default function TimeMachinePage() {
   const [bbox, setBbox] = useState<Bbox | null>(DEFAULT_BBOX);
-  const [features, setFeatures] = useState<FeatureId[]>([...DEFAULT_FEATURES]);
-  const [pol, setPol] = useState(DEFAULT_POL);
-  const [dateMode, setDateMode] = useState<"single" | "pair">("single");
-  const [beforeDate, setBeforeDate] = useState<string>(SCAN_DATES[1]);
-  const [afterDate, setAfterDate] = useState<string>(SCAN_DATES[SCAN_DATES.length - 2]);
-  const [scan, setScan] = useState<ScanResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [scanCount, setScanCount] = useState(0);
-  const [status, setStatus] = useState<PrototypeDataStatus | null>(null);
-  const [statusError, setStatusError] = useState<string | null>(null);
+  const [status, setStatus] = useState<DataStatus | null>(null);
+  const [availabilityError, setAvailabilityError] = useState("");
+  const [scanState, setScanState] = useState<ScanState>("idle");
+  const [job, setJob] = useState<FetchJob | null>(null);
+  const [manifest, setManifest] = useState<SiteManifest | null>(null);
+  const [demoScan, setDemoScan] = useState<ScanResult | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [pollToken, setPollToken] = useState(0);
 
   useEffect(() => {
     let active = true;
-    fetch("/api/data-status")
+    fetch("/api/data-status", { cache: "no-store" })
       .then(async (response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return (await response.json()) as PrototypeDataStatus;
+        if (!response.ok) throw new Error(`Backend status returned HTTP ${response.status}.`);
+        return response.json() as Promise<DataStatus>;
       })
-      .then((value) => {
-        if (active) setStatus(value);
-      })
-      .catch((reason: unknown) => {
-        if (active) {
-          setStatusError(reason instanceof Error ? reason.message : "Data status could not be loaded.");
-        }
-      });
-    return () => {
-      active = false;
-    };
+      .then((value) => { if (active) setStatus(value); })
+      .catch((reason: unknown) => { if (active) setAvailabilityError(reason instanceof Error ? reason.message : "Backend status is unavailable."); });
+    return () => { active = false; };
   }, []);
 
-  const selectedFeaturesMatch = scan
-    && [...scan.features].sort().join(",") === [...features].sort().join(",");
-  const bboxMatches = scan
-    && bbox
-    && scan.bbox.every((value, index) => Math.abs(value - bbox[index]) < 1e-9);
-  const pendingChanges = Boolean(
-    scan
-    && (
-      !selectedFeaturesMatch
-      || !bboxMatches
-      || scan.pol !== pol
-      || scan.dateMode !== dateMode
-      || scan.beforeDate !== beforeDate
-      || scan.afterDate !== afterDate
-    ),
-  );
+  useEffect(() => {
+    if (!job?.job_id || !["queued", "running"].includes(job.status)) return;
+    let active = true;
+    let delay = 1000;
+    const poll = async () => {
+      while (active) {
+        await wait(delay);
+        if (!active) return;
+        try {
+          const latest = await getFetchJob(job.job_id);
+          if (!active) return;
+          setJob(latest);
+          if (latest.status === "queued" || latest.status === "running") {
+            delay = Math.min(5000, Math.round(delay * 1.5));
+            continue;
+          }
+          if (latest.status === "cancelled") {
+            setScanState("cancelled");
+            setBusy(false);
+            return;
+          }
+          if (latest.status === "failed") {
+            const message = latest.error || latest.message || "The live-fetch job failed.";
+            setError(message);
+            setScanState(/size|limit|too large|bytes/i.test(message) ? "size-limit" : "failed");
+            setBusy(false);
+            return;
+          }
+          const siteId = latest.result?.site_id || latest.site_id;
+          const builtManifest = await fetchManifest(siteId);
+          if (!active) return;
+          setManifest(builtManifest);
+          setScanState("succeeded");
+          setBusy(false);
+          return;
+        } catch (reason) {
+          if (!active) return;
+          setError(liveFetchErrorMessage(reason));
+          setScanState("failed");
+          setBusy(false);
+          return;
+        }
+      }
+    };
+    void poll();
+    return () => { active = false; };
+    // pollToken deliberately restarts the effect after cancellation/submit state changes.
+  }, [job?.job_id, job?.status, pollToken]);
 
-  const startScan = async () => {
-    setError(null);
+  const beginLiveScan = async () => {
+    setError("");
+    setManifest(null);
+    setDemoScan(null);
     if (!isValidBbox(bbox)) {
-      setError("Select a valid Mapbox region before starting a scan.");
+      setError("Choose a valid map region before starting the live scan.");
       return;
     }
-    if (features.length === 0) {
-      setError("Choose at least one feature to visualise.");
-      return;
-    }
-    if (
-      !SCAN_DATES.includes(beforeDate as (typeof SCAN_DATES)[number]) ||
-      !SCAN_DATES.includes(afterDate as (typeof SCAN_DATES)[number])
-    ) {
-      setError("Choose exact installed dates. No substitute date is used.");
-      return;
-    }
-    if (dateMode === "pair") {
-      if (!features.includes("compare")) {
-        setError("Enable “Two-date compare” in feature choices to use two-date review.");
+    setBusy(true);
+    setScanState("queued");
+    setJob(null);
+    try {
+      if (!await checkLiveFetchAvailable()) {
+        throw new LiveFetchError("Live fetch is disabled by backend configuration.", "disabled");
+      }
+      const result = await startLiveFetch({ bbox, ...LIVE_REQUEST });
+      if ("job_id" in result && result.job_id) {
+        setJob(result);
+        setScanState(result.status === "running" ? "running" : "queued");
+        setPollToken((value) => value + 1);
         return;
       }
-      if (beforeDate >= afterDate) {
-        setError("The before date must be earlier than the after date. No substitute date is used.");
-        return;
-      }
+      const siteId = result.site_id;
+      setManifest(await fetchManifest(siteId));
+      setScanState("succeeded");
+      setBusy(false);
+    } catch (reason) {
+      setError(liveFetchErrorMessage(reason));
+      if (reason instanceof LiveFetchError && reason.kind === "credentials") setScanState("credential-error");
+      else if (reason instanceof LiveFetchError && reason.kind === "size-limit") setScanState("size-limit");
+      else setScanState("failed");
+      setBusy(false);
     }
+  };
 
-    setLoading(true);
-    setScan(null);
+  const cancel = async () => {
+    if (!job?.job_id) return;
+    setError("");
+    try {
+      const updated = await cancelFetchJob(job.job_id);
+      setJob(updated);
+      if (updated.status === "cancelled") {
+        setScanState("cancelled");
+        setBusy(false);
+      } else {
+        setError(updated.message || "Cancellation requested; the active download may finish its current stage first.");
+      }
+      setPollToken((value) => value + 1);
+    } catch (reason) {
+      setError(liveFetchErrorMessage(reason));
+    }
+  };
+
+  const startDemo = async () => {
+    setError("");
+    setManifest(null);
+    setDemoScan(null);
+    if (!isValidBbox(bbox)) {
+      setError("Choose a valid map region before starting the demo.");
+      return;
+    }
+    setBusy(true);
     try {
       const response = await fetch("/tm/scan", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           bbox,
-          features,
-          dateMode,
-          pol,
-          beforeDate,
-          afterDate,
+          features: ["backscatter", "playback", "compare", "provenance"],
+          dateMode: "pair",
+          pol: "HH",
+          beforeDate: SCAN_DATES[0],
+          afterDate: SCAN_DATES[SCAN_DATES.length - 1],
         }),
       });
-      const body = (await response.json()) as ScanResult | { detail?: string };
-      if (!response.ok) {
-        throw new Error("detail" in body && body.detail ? body.detail : `Scan failed (HTTP ${response.status}).`);
-      }
-      setScan(body as ScanResult);
-      setScanCount((current) => current + 1);
+      const result = await response.json() as ScanResult | { detail?: string };
+      if (!response.ok) throw new Error("detail" in result ? result.detail || `Demo failed (HTTP ${response.status}).` : `Demo failed (HTTP ${response.status}).`);
+      setDemoScan(result as ScanResult);
+      setScanState("demo");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The prototype scan could not be started.");
+      setError(reason instanceof Error ? reason.message : "The procedural demo could not be loaded.");
+      setScanState("failed");
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   };
 
+  const percent = typeof job?.progress === "number" ? Math.max(0, Math.min(100, job.progress)) : null;
   const statusLabel = status
-    ? `${status.primary_mission} · ${status.active_source} · ${status.sites_count} installed site${status.sites_count === 1 ? "" : "s"}${status.live_fetch_enabled ? "" : " · live fetch off"}`
-    : "Prototype · synthetic frames";
+    ? `${status.primary_mission} · ${status.sites_count} installed site${status.sites_count === 1 ? "" : "s"} · live fetch ${status.live_fetch_enabled ? "enabled" : "disabled"}`
+    : "Checking backend availability…";
 
   return (
-    <AppShell
-      current="/time-machine"
-      eyebrow="Map-first cinematic explorer"
-      title="SAR Time Machine"
-      subtitle="Select any region with Mapbox, choose the features to visualise, then start a synthetic scan and review exact dates by slider, playback or two-date compare."
-      status={<span>{statusLabel}</span>}
-    >
-      <section className="tm-notice tm-panel" style={{ marginBottom: 18 }}>
-        <strong>Prototype scan.</strong> {SYNTHETIC_NOTICE} The FastAPI backend has an arbitrary-bbox live-fetch
-        endpoint, but this preview deliberately does not download real granules or claim a validated result.
-      </section>
-
-      <div className="tm-layout">
-        <div>
-          <RegionSelector initialBbox={DEFAULT_BBOX} onChange={setBbox} />
-
-          <section className="tm-panel">
-            <h2 className="tm-panel__title">2 · Choose features</h2>
-            <FeatureChoices selected={features} onChange={setFeatures} disabled={loading} />
-            <div className="tm-chip-row" aria-label="Selected features">
-              {features.map((id) => <span key={id} className="tm-chip">{featureLabel(id)}</span>)}
-            </div>
+    <AppShell current="/time-machine" eyebrow="Live acquisition time explorer" title="SAR Time Machine" subtitle="Request a real ASF/NASA Earthdata fetch, then animate only exact backscatter observations built by the processing pipeline." status={<span>{statusLabel}</span>}>
+      <div className="grid gap-5 xl:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.5fr)]">
+        <div className="space-y-4">
+          <section className="rounded-lg border border-slate-700 bg-[#111a24] p-4">
+            <h2 className="text-base font-semibold">1 · Select a region</h2>
+            <p className="mt-1 text-sm text-slate-400">The default box surrounds Anak Krakatau. Draw or enter another bounding box if needed.</p>
+            <div className="mt-3"><RegionSelector initialBbox={DEFAULT_BBOX} onChange={setBbox} /></div>
+            <p className="mt-2 text-xs text-slate-400">Selected bbox: <code>{bbox ? formatBbox(bbox) : "not selected"}</code></p>
           </section>
 
-          <section className="tm-panel">
-            <h2 className="tm-panel__title">3 · Scan options</h2>
-            <div className="tm-controls__row">
-              <label>
-                Polarization
-                <select value={pol} onChange={(event) => setPol(event.target.value)} disabled={loading}>
-                  {["HH", "HV", "VV", "VH"].map((item) => <option key={item} value={item}>{item}</option>)}
-                </select>
-              </label>
-              <label>
-                Time review
-                <select
-                  value={dateMode}
-                  onChange={(event) => setDateMode(event.target.value as "single" | "pair")}
-                  disabled={loading}
-                >
-                  <option value="single">One event date (before / after)</option>
-                  <option value="pair">Two dates to compare</option>
-                </select>
-              </label>
-            </div>
-
-            {dateMode === "pair" && (
-              <div className="tm-calendar" style={{ marginTop: 12, marginBottom: 0 }}>
-                <div className="tm-calendar__row">
-                  <label className="tm-calendar__label">
-                    Before date
-                    <input
-                      type="date"
-                      value={beforeDate}
-                      min={SCAN_DATES[0]}
-                      max={SCAN_DATES[SCAN_DATES.length - 1]}
-                      onChange={(event) => setBeforeDate(event.target.value)}
-                      disabled={loading}
-                      aria-label="Before date"
-                    />
-                  </label>
-                  <label className="tm-calendar__label">
-                    After date
-                    <input
-                      type="date"
-                      value={afterDate}
-                      min={SCAN_DATES[0]}
-                      max={SCAN_DATES[SCAN_DATES.length - 1]}
-                      onChange={(event) => setAfterDate(event.target.value)}
-                      disabled={loading}
-                      aria-label="After date"
-                    />
-                  </label>
-                </div>
-                <div className="tm-chip-row" aria-label="Exact installed dates">
-                  {SCAN_DATES.map((date) => <span key={date} className="tm-chip">{date}</span>)}
-                </div>
-              </div>
-            )}
-
-            <div className="tm-actions">
-              <button
-                type="button"
-                className="tm-button tm-button--primary"
-                onClick={startScan}
-                disabled={loading || !bbox || features.length === 0}
-              >
-                {loading ? "Scanning…" : "Start scan for selected region"}
-              </button>
-              <button
-                type="button"
-                className="tm-button tm-button--ghost"
-                onClick={() => {
-                  setScan(null);
-                  setError(null);
-                }}
-                disabled={loading || !scan}
-              >
-                Reset
-              </button>
-            </div>
-
-            {bbox && (
-              <p className="tm-muted" style={{ marginTop: 10 }}>
-                Selected bbox: <code>{formatBbox(bbox)}</code>
-              </p>
-            )}
-            {pendingChanges && (
-              <p className="tm-problem" role="status" style={{ marginTop: 12 }}>
-                Selection changed. Press “Start scan for selected region” again to refresh the frames.
-              </p>
-            )}
-            {error && <p className="tm-problem" role="alert" style={{ marginTop: 12 }}>{error}</p>}
-            {scan && (
-              <p className="tm-muted" style={{ marginTop: 10 }}>
-                Scan #{scanCount} · {scan.dates.length} exact dates · {scan.pol} · generated at{" "}
-                {new Date(scan.generatedAt).toLocaleString()}.
-              </p>
-            )}
+          <section className="rounded-lg border border-slate-700 bg-[#111a24] p-4">
+            <h2 className="text-base font-semibold">2 · Live scan options</h2>
+            <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm"><dt className="text-slate-400">Exact window</dt><dd>2026-08-13 to 2026-09-30</dd><dt className="text-slate-400">Polarizations</dt><dd>HH + HV</dd><dt className="text-slate-400">Maturity</dt><dd>PROVISIONAL</dd><dt className="text-slate-400">Source</dt><dd>ASF / NASA Earthdata</dd></dl>
+            <p className="mt-3 text-xs leading-5 text-slate-400">The request covers the specified five acquisition dates. The viewer includes only exact backscatter layers returned in the built manifest; missing dates remain missing.</p>
+            <button className="tm-button tm-button--primary mt-4 w-full" type="button" onClick={beginLiveScan} disabled={busy || !bbox || status?.live_fetch_enabled === false}>{busy && !job ? "Checking and submitting…" : "Fetch real observations"}</button>
+            {availabilityError && <p className="mt-2 text-xs text-amber-200">Backend status: {availabilityError}</p>}
+            {status?.live_fetch_enabled === false && <p className="mt-2 text-xs text-amber-200">Live fetch is disabled on this backend. No request was submitted.</p>}
           </section>
+
+          <section className="rounded-lg border border-slate-700 bg-[#111a24] p-4" aria-live="polite">
+            <h2 className="text-base font-semibold">Scan status · {stateText(scanState)}</h2>
+            {(scanState === "queued" || scanState === "running") && <div className="mt-3 space-y-2">
+              <p className="text-sm text-slate-300">{job?.message || "Submitting the scan request…"}{job?.stage ? ` · ${job.stage}` : ""}</p>
+              {percent !== null && <div><div className="mb-1 flex justify-between text-xs text-slate-400"><span>Backend-reported progress</span><span>{percent}%</span></div><progress className="w-full" max={100} value={percent}>{percent}%</progress></div>}
+              <button className="tm-button tm-button--ghost" type="button" onClick={cancel} disabled={!job?.job_id}>Cancel fetch</button>
+            </div>}
+            {job?.status === "failed" && job.error && <p className="mt-2 text-sm text-red-200">{job.error}</p>}
+            {job?.status === "cancelled" && <p className="mt-2 text-sm text-slate-300">No additional frames were generated after cancellation.</p>}
+            {error && <p className="mt-3 text-sm text-amber-200" role="alert">{error}</p>}
+            {scanState === "credential-error" && <p className="mt-2 text-xs text-slate-400">Credential guidance is in <code>docs/LIVE_FETCH.md</code>. This UI does not collect or expose credentials.</p>}
+            {scanState === "size-limit" && <p className="mt-2 text-xs text-slate-400">Reduce the selected region or ask the backend operator to review configured limits. No result is presented as complete.</p>}
+          </section>
+
+          <details className="rounded-lg border border-amber-800/70 bg-amber-950/25 p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-amber-100">Optional demo visualization (procedural, not observations)</summary>
+            <p className="mt-2 text-xs leading-5 text-amber-100/80">{SYNTHETIC_NOTICE}</p>
+            <button className="tm-button tm-button--ghost mt-3" type="button" onClick={startDemo} disabled={busy || !bbox}>Run labeled demo fallback</button>
+          </details>
         </div>
 
-        <div>
-          <section className="tm-panel" style={{ padding: 10, marginBottom: 14 }}>
-            <div className="tm-controls__row" style={{ justifyContent: "space-between" }}>
-              <div>
-                <h2 className="tm-panel__title" style={{ margin: 0 }}>4 · Review time</h2>
-                <p className="tm-muted" style={{ marginTop: 4 }}>
-                  Slider, playback, one event date or two exact dates.
-                </p>
-              </div>
-              <Link href="/compare" className="tm-button tm-button--ghost">
-                Installed-product compare ↗
-              </Link>
-            </div>
-          </section>
-          <TimeReview scan={scan} loading={loading} />
-        </div>
-
-        <div>
-          <section className="tm-panel">
-            <h2 className="tm-panel__title">5 · Feature outputs</h2>
-            {!scan ? (
-              <p className="tm-muted">Run a scan to populate the selected feature panels.</p>
-            ) : (
-              <div>
-                {scan.features.includes("backscatter") && (
-                  <OutputBlock title="Backscatter observations">
-                    {scan.frames.length} dated frames are ordered by exact date. No intermediate observations are
-                    invented.
-                    <div className="tm-spark" aria-label="Equal frame slots, not measured values">
-                      {scan.frames.map((frame) => <i key={frame.date} style={{ height: "52%" }} />)}
-                    </div>
-                  </OutputBlock>
-                )}
-                {scan.features.includes("change") && (
-                  <OutputBlock title="Difference product">
-                    <div className="tm-gradient" aria-hidden="true" />
-                    Difference layers are kept separate from observation frames. A brightness difference is a
-                    measured output, not a cause and not a validated scientific result.
-                  </OutputBlock>
-                )}
-                {scan.features.includes("mask") && (
-                  <OutputBlock title="Threshold mask">
-                    <div className="tm-chip-row">
-                      {["2 dB", "3 dB", "6 dB"].map((item) => <span key={item} className="tm-chip">{item}</span>)}
-                    </div>
-                    Threshold choices are illustrative here; no validated change area is computed from real data.
-                  </OutputBlock>
-                )}
-                {scan.features.includes("timeseries") && (
-                  <OutputBlock title="Time series">
-                    Only the {scan.dates.length} installed synthetic dates appear. Missing dates are gaps, never
-                    substituted with neighbouring observations.
-                  </OutputBlock>
-                )}
-                {scan.features.includes("provenance") && (
-                  <OutputBlock title="Provenance">
-                    {SYNTHETIC_NOTICE}
-                  </OutputBlock>
-                )}
-                {scan.features.includes("playback") && (
-                  <OutputBlock title="Playback">
-                    Play/pause and speed controls step through the dated frames at equal time per frame.
-                  </OutputBlock>
-                )}
-                {scan.features.includes("compare") && (
-                  <OutputBlock title="Two-date compare">
-                    The reveal handle uses exactly the selected before and after observation layers. It refuses
-                    a substitute date, polarization or difference/change-mask layer.
-                  </OutputBlock>
-                )}
-                {scan.features.includes("normalization") && (
-                  <OutputBlock title="Angle normalization · proposed">
-                    Real acquisitions need a per-pixel local incidence angle or gamma-to-sigma factor, a common
-                    reference geometry, and a regression test on two real dates. No correction is applied to
-                    procedural frames, and no normalised result is claimed here.
-                  </OutputBlock>
-                )}
-                {scan.features.includes("insar") && (
-                  <OutputBlock title="Interferometry · proposed">
-                    The current pipeline reads detected GCOV backscatter, which does not preserve interferometric
-                    phase. A real feature needs phase-capable SLC/GUNW-style products, coregistration, DEM and
-                    baseline handling, coherence, unwrapping and scientific review. No deformation result is
-                    computed here.
-                  </OutputBlock>
-                )}
-              </div>
-            )}
-          </section>
-
-          <section className="tm-panel">
-            <h2 className="tm-panel__title">Observation facts</h2>
-            <dl className="tm-facts">
-              <div><dt>Region</dt><dd>{scan ? formatBbox(scan.bbox) : bbox ? formatBbox(bbox) : "not selected"}</dd></div>
-              <div><dt>Polarization</dt><dd>{scan?.pol ?? pol}</dd></div>
-              <div><dt>Dates</dt><dd>{scan ? `${scan.dates.length} exact slots` : "awaiting scan"}</dd></div>
-              <div><dt>Display</dt><dd>{scan ? `${scan.displayRange[0]} to ${scan.displayRange[1]} dB` : "-25 to -5 dB"}</dd></div>
-              <div><dt>Source</dt><dd>Procedural SVG</dd></div>
-            </dl>
-          </section>
-
-          <section className="tm-panel">
-            <h2 className="tm-panel__title">Backend support check</h2>
-            {statusError ? (
-              <p className="tm-problem">{statusError}</p>
-            ) : status ? (
-              <dl className="tm-facts">
-                <div><dt>Primary mission</dt><dd>{status.primary_mission}</dd></div>
-                <div><dt>Active source</dt><dd>{status.active_source}</dd></div>
-                <div><dt>Products ready</dt><dd>{status.nisar_ready ? "yes" : "no"}</dd></div>
-                <div><dt>Installed sites</dt><dd>{status.sites_count}</dd></div>
-                <div><dt>Live fetch</dt><dd>{status.live_fetch_enabled ? "enabled" : "disabled"}</dd></div>
-              </dl>
-            ) : (
-              <p className="tm-muted">Checking backend status…</p>
-            )}
-            <p className="tm-muted" style={{ marginTop: 10 }}>
-              The backend’s <code>POST /api/nisar/fetch</code> accepts an arbitrary bbox, start/end dates, maturity,
-              polarizations and max granules. The Time Machine scan button does not call that endpoint; it returns
-              procedural SVG frames. A real live build needs Earthdata credentials and the operator API, and is not
-              attempted here.
-              {status && status.live_fetch_enabled === false && " Live fetch is currently disabled for this backend."}
-            </p>
-          </section>
-
-          <section className="tm-panel">
-            <h2 className="tm-panel__title">Feature check</h2>
-            <FeatureCheck />
-          </section>
-
-          <section className="tm-panel tm-notice">
-            <h2 className="tm-panel__title">What this prototype is not</h2>
-            <p className="tm-muted">
-              It is not a tiled Mapbox product adapter, a real-granule scan, or evidence of surface change. A
-              production integration must handle tile loading, projection, camera sync, exact dates and attribution.
-            </p>
-          </section>
+        <div className="min-w-0 space-y-4">
+          {manifest ? <>
+            <div className="rounded-lg border border-amber-700/60 bg-amber-950/25 p-3 text-sm text-amber-100"><strong>PROVISIONAL NISAR products.</strong> These are processed backscatter rasters, not independently validated scientific results. Difference and change-mask products are excluded from playback.</div>
+            <WorldviewReview manifest={manifest} polarization={manifest.layers.find((layer) => layer.kind === "backscatter")?.pol?.toUpperCase() ?? "HH"} />
+          </> : demoScan ? <>
+            <div className="rounded-lg border border-amber-700/60 bg-amber-950/35 p-4 text-sm text-amber-100"><strong>Demo visualization — not NISAR observations, not a real change, not evidence of anything.</strong><br />{demoScan.caveat}</div>
+            <TimeReview scan={demoScan} loading={false} />
+          </> : <section className="grid min-h-[28rem] place-items-center rounded-lg border border-dashed border-slate-700 bg-slate-950/30 p-8 text-center">
+            <div><p className="text-xs uppercase tracking-[0.2em] text-sky-300">Worldview-inspired timeline</p><h2 className="mt-2 text-xl font-semibold">No live frames loaded</h2><p className="mt-2 max-w-lg text-sm leading-6 text-slate-400">Start a live fetch to animate exact raster acquisitions. If Earthdata credentials are not configured, the blocked state and operator guidance will be shown here.</p></div>
+          </section>}
         </div>
       </div>
+      <section className="mt-5 rounded-lg border border-slate-800 bg-slate-950/40 p-4 text-xs leading-5 text-slate-400">
+        <strong className="text-slate-200">Acquisition cadence:</strong> the requested Anak Krakatau stack presets are Aug 13, Aug 25, Sep 6, Sep 18, and Sep 30, 2026. This frontend does not fill gaps, interpolate frames, or substitute dates/polarizations. Actual availability depends on the returned manifest and backend Earthdata access. See <code>docs/LIVE_FETCH.md</code> for backend setup and limitations.
+      </section>
     </AppShell>
   );
 }
