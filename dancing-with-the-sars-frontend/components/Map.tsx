@@ -15,13 +15,29 @@ interface MapProps {
   setView: (view: MapView) => void;
 }
 
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
-const hasMapboxToken = Boolean(process.env.NEXT_PUBLIC_MAPBOX_TOKEN);
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+mapboxgl.accessToken = MAPBOX_TOKEN || "pk.prototype-no-token";
+const HAS_MAPBOX_TOKEN = /^pk\.[A-Za-z0-9._-]{20,}$/.test(MAPBOX_TOKEN);
 
-const styleForView = (view: MapView) =>
-  view === "optical"
+const FALLBACK_STYLE = (dark: boolean): mapboxgl.Style =>
+  ({
+    version: 8,
+    sources: {},
+    layers: [
+      {
+        id: "dark-background",
+        type: "background",
+        paint: { "background-color": dark ? "#071018" : "#0b1720" },
+      },
+    ],
+  }) as unknown as mapboxgl.Style;
+
+const styleForView = (view: MapView): string | mapboxgl.Style => {
+  if (!HAS_MAPBOX_TOKEN) return FALLBACK_STYLE(view === "sar");
+  return view === "optical"
     ? "mapbox://styles/mapbox/satellite-streets-v12"
     : "mapbox://styles/mapbox/dark-v11";
+};
 
 function syncProductLayers(map: mapboxgl.Map, layers: ProductLayer[]) {
   const activeLayerIds = new Set(layers.map((layer) => `nisar-layer-${layer.id}`));
@@ -70,16 +86,26 @@ export const Map: React.FC<MapProps> = ({ bbox, layers, view, setView }) => {
   currentLayers.current = layers;
 
   useEffect(() => {
-    if (!hasMapboxToken || map.current || !mapContainer.current) return;
+    if (map.current || !mapContainer.current) return;
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: styleForView(view),
       center: [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2],
       zoom: 5,
+      attributionControl: false,
     });
     map.current.addControl(new mapboxgl.NavigationControl(), "top-right");
     map.current.on("load", () => {
       if (map.current) syncProductLayers(map.current, currentLayers.current);
+    });
+    map.current.on("style.load", () => {
+      if (map.current) syncProductLayers(map.current, currentLayers.current);
+    });
+    map.current.on("error", (event) => {
+      const message = (event as { error?: Error }).error?.message ?? "";
+      if (map.current && /token|401|403|style|failed/i.test(message)) {
+        map.current.setStyle(FALLBACK_STYLE(true));
+      }
     });
     return () => {
       map.current?.remove();
@@ -125,17 +151,22 @@ export const Map: React.FC<MapProps> = ({ bbox, layers, view, setView }) => {
 
   return (
     <div className="relative h-full min-h-[420px] w-full overflow-hidden rounded-lg border border-slate-700/80">
-      {hasMapboxToken ? (
-        <div ref={mapContainer} className="h-full w-full" />
-      ) : (
-        <div className="absolute inset-0 grid place-items-center bg-slate-900 px-6 text-center">
-          <div className="max-w-sm">
-            <p className="text-sm font-semibold text-white">Mapbox token required</p>
-            <p className="mt-2 text-xs leading-5 text-slate-400">
-              Add NEXT_PUBLIC_MAPBOX_TOKEN to .env.local and restart the frontend.
-            </p>
+      <div ref={mapContainer} className="h-full w-full" />
+      {!HAS_MAPBOX_TOKEN && (
+        <>
+          <div
+            className="pointer-events-none absolute inset-0 opacity-60"
+            aria-hidden="true"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(125,216,236,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(125,216,236,0.12) 1px, transparent 1px)",
+              backgroundSize: "48px 48px",
+            }}
+          />
+          <div className="absolute right-3 top-3 max-w-[240px] rounded-md border border-amber-700/50 bg-slate-950/90 px-2 py-1 text-[10px] leading-4 text-amber-100">
+            Local canvas: product tiles remain visible; Mapbox basemap needs a real token.
           </div>
-        </div>
+        </>
       )}
       <div className="absolute left-3 top-3 flex rounded-md border border-slate-600 bg-slate-950/95 p-1 text-xs shadow-lg">
         {(["optical", "sar"] as const).map((mode) => (
@@ -159,7 +190,7 @@ export const Map: React.FC<MapProps> = ({ bbox, layers, view, setView }) => {
         <p>{view === "optical" ? "Mapbox satellite imagery is visual context only, not a matched-date observation." : selectedLayer?.legend ?? layerColor}</p>
       </aside>
       <div className="absolute bottom-3 right-3 rounded bg-slate-950/80 px-2 py-1 text-[10px] text-slate-300">
-        Map imagery © Mapbox
+        {HAS_MAPBOX_TOKEN ? "Map imagery © Mapbox" : "Preview canvas · no external basemap"}
       </div>
     </div>
   );

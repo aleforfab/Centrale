@@ -1,5 +1,5 @@
 import React from "react";
-import { SiteNav } from "@/components/SiteNav";
+import { AppShell } from "@/components/AppShell";
 import {
   APPLICATIONS,
   CAPABILITIES,
@@ -34,17 +34,13 @@ export default function ApplicationsPage() {
   const interferometryCount = topicsRequiringInterferometry().length;
 
   return (
-    <main className="min-h-screen bg-[#0b1118] p-4 text-slate-100 sm:p-6 lg:p-8">
-      <header className="mb-3 border-b border-slate-700/70 pb-4">
-        <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-slate-500">Earth observation workspace</p>
-        <h1 className="text-2xl font-semibold tracking-tight">Applications library</h1>
-        <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">
-          Twelve NISAR application topics. Each entry separates what a radar time series can genuinely show from
-          what needs a different measurement or an independent source.
-        </p>
-      </header>
-
-      <SiteNav current="/applications" />
+    <AppShell
+      current="/applications"
+      eyebrow="Capability library"
+      title="Applications library"
+      subtitle="Twelve NISAR topics, with capability labels derived from the source register and the limits of a backscatter-only pipeline."
+      status={<span>12 topics · derived labels · no validated case</span>}
+    >
 
       <section className="mb-6 rounded-lg border border-slate-700/80 bg-[#111a24] p-5">
         <h2 className="text-sm font-semibold">Capability labels used here</h2>
@@ -127,6 +123,6 @@ export default function ApplicationsPage() {
           dataset is treated as integrated merely because a paper mentions it.
         </p>
       </footer>
-    </main>
+    </AppShell>
   );
 }

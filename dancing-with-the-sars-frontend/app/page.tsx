@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { AppShell } from "@/components/AppShell";
 import { DanceChart } from "@/components/DanceChart";
 import { Map, type MapView } from "@/components/Map";
-import { SiteNav } from "@/components/SiteNav";
 import { api } from "@/lib/api";
 import type {
   DataStatus,
@@ -162,49 +163,70 @@ export default function Home() {
     if (backscatterLayer) setLayerId(backscatterLayer.id);
   };
 
-  return (
-    <main className="min-h-screen bg-[#0b1118] p-4 text-slate-100 sm:p-6 lg:p-8">
-      <header className="mb-6 flex flex-col gap-4 border-b border-slate-700/70 pb-5 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-slate-500">Earth observation workspace</p>
-          <h1 className="text-2xl font-semibold tracking-tight">Dancing with the SARs</h1>
-          <p className="mt-1 text-sm text-slate-400">Precomputed NISAR L-band observations and change products</p>
-        </div>
-        <div className="max-w-lg rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-300" role="status">
-          {status
-            ? status.nisar_ready
-              ? `NISAR products ready · ${status.sites_count} site${status.sites_count === 1 ? "" : "s"}`
-              : status.active_source
-            : "Checking data availability…"}
-        </div>
-      </header>
+  const statusLabel = status
+    ? status.nisar_ready
+      ? `NISAR products ready · ${status.sites_count} site${status.sites_count === 1 ? "" : "s"}`
+      : status.active_source
+    : "Checking data availability…";
 
-      <SiteNav current="/" />
+  return (
+    <AppShell
+      current="/"
+      eyebrow="Map-first explorer"
+      title="Dancing with the SARs"
+      subtitle="Installed NISAR product layers, exact dates and measured change products in a cinematic radar workspace."
+      status={<span>{statusLabel}</span>}
+    >
+      <section className="tm-hero">
+        <div>
+          <p className="tm-hero__eyebrow">Mission workspace · installed products</p>
+          <h2>Explore a dated radar stack, then step into the Time Machine.</h2>
+          <p>
+            The map stays dominant. Controls are compact, dates are explicit, and the synthetic caveat travels
+            with every product view.
+          </p>
+        </div>
+        <div className="tm-hero__actions">
+          <Link href="/time-machine" className="tm-button tm-button--primary">
+            Open Time Machine →
+          </Link>
+          <Link href="/compare" className="tm-button">
+            Exact before / after
+          </Link>
+        </div>
+      </section>
 
       {error && (
-        <div className="mb-5 flex items-start justify-between gap-4 rounded-md border border-red-700/60 bg-red-950/80 p-4 text-sm text-red-200" role="alert">
-          <span>{error}</span>
-          <button type="button" onClick={() => setError(null)} className="underline underline-offset-2">Dismiss</button>
+        <div className="tm-problem" role="alert" style={{ marginBottom: 18 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+            <span>{error}</span>
+            <button type="button" onClick={() => setError(null)} className="underline underline-offset-2">
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
 
       {isLoadingSites ? (
-        <div className="grid min-h-80 place-items-center text-sm text-slate-400">Loading NISAR site catalog…</div>
+        <div className="tm-panel" style={{ display: "grid", minHeight: 320, placeItems: "center" }}>
+          <p className="tm-muted">Loading NISAR site catalog…</p>
+        </div>
       ) : sites.length === 0 ? (
-        <section className="mx-auto mt-16 max-w-2xl rounded-xl border border-slate-700 bg-[#111a24] p-8 text-center">
-          <h2 className="text-lg font-semibold">No precomputed NISAR sites yet</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-400">
-            This interface only displays built NISAR products; it does not substitute Sentinel-1 analysis or create results on demand.
+        <section className="tm-panel tm-notice" style={{ margin: "48px auto", maxWidth: 720, textAlign: "center", padding: 32 }}>
+          <h2>No precomputed NISAR sites yet</h2>
+          <p className="tm-muted" style={{ marginTop: 12 }}>
+            This interface only displays built NISAR products; it does not substitute Sentinel-1 analysis or
+            create results on demand.
           </p>
           <p className="mt-4 rounded bg-slate-950 p-3 font-mono text-xs text-slate-300">
             python -m nisar.cli build-site --config sites/&lt;site&gt;.yaml
           </p>
-          {status && <p className="mt-3 text-xs text-slate-500">{status.message}</p>}
+          {status && <p className="tm-muted" style={{ marginTop: 12 }}>{status.message}</p>}
         </section>
       ) : (
         <>
-          <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
-            <label className="text-xs font-medium text-slate-400">
+          <div className="tm-dashboard-controls">
+            <label>
               NISAR site
               <select
                 value={siteId}
@@ -214,7 +236,7 @@ export default function Home() {
                 {sites.map((site) => <option key={site.id} value={site.id}>{site.title}</option>)}
               </select>
             </label>
-            <label className="text-xs font-medium text-slate-400">
+            <label>
               Polarization
               <select
                 value={polarization}
@@ -225,7 +247,7 @@ export default function Home() {
                 {manifest?.polarizations.map((item) => <option key={item.pol} value={item.pol}>{item.pol}</option>)}
               </select>
             </label>
-            <label className="text-xs font-medium text-slate-400">
+            <label>
               Product layer
               <select
                 value={layer?.id ?? ""}
@@ -241,10 +263,16 @@ export default function Home() {
                 {polLayers.map((item) => <option key={item.id} value={item.id}>{item.title ?? item.id}</option>)}
               </select>
             </label>
+            <div className="tm-dashboard-controls__meta">
+              <span>{manifest?.acquisitions.length ?? 0} acquisitions</span>
+              <span>{polLayers.length} layers</span>
+              <span>{view === "sar" ? "NISAR view" : "Optical context"}</span>
+            </div>
           </div>
+
           {polLayers.length > 1 && (
-            <fieldset className="mb-5 rounded-lg border border-slate-700 bg-[#111a24] px-4 py-3">
-              <legend className="px-1 text-xs font-medium text-slate-400">Visible map overlays</legend>
+            <fieldset className="tm-dashboard-overlays">
+              <legend>Visible map overlays</legend>
               <div className="flex flex-wrap gap-x-5 gap-y-2">
                 {polLayers.map((item) => (
                   <label key={item.id} className="flex items-center gap-2 text-xs text-slate-300">
@@ -264,17 +292,49 @@ export default function Home() {
           )}
 
           {isLoadingManifest ? (
-            <div className="grid min-h-80 place-items-center text-sm text-slate-400">Loading site manifest…</div>
+            <div className="tm-panel" style={{ display: "grid", minHeight: 420, placeItems: "center" }}>
+              <p className="tm-muted">Loading site manifest…</p>
+            </div>
           ) : manifest ? (
-            <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
-              <section className="flex flex-col gap-5 xl:col-span-4">
-                <article className="rounded-lg border border-slate-700/80 bg-[#111a24] p-5">
-                  <h2 className="text-lg font-semibold">{manifest.site.title}</h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-300">{manifest.site.description}</p>
-                  <p className="mt-3 text-xs leading-5 text-amber-200/90">{manifest.site.caveat}</p>
-                  <div className="mt-4 flex flex-wrap gap-2 text-[11px]">
+            <div className="tm-dashboard-grid">
+              <section className="tm-dashboard-map" aria-label="Installed NISAR product map">
+                <div className="tm-dashboard-map__canvas">
+                  <Map
+                    bbox={manifest.site.bbox}
+                    layers={visibleLayers}
+                    view={view}
+                    setView={setView}
+                  />
+                </div>
+                <div className="tm-dashboard-map__hud">
+                  <div className="tm-dashboard-map__date">
+                    <span>{layer?.kind === "backscatter" ? "Observation" : "Product"}</span>
+                    <strong>{layer?.date ?? manifest.pairs[0]?.label ?? manifest.site.title}</strong>
+                    <small>{polarization} · {layer?.title ?? "No layer selected"}</small>
+                  </div>
+                  <span className="tm-stage__badge" style={{ position: "static" }}>
+                    Synthetic fixture
+                  </span>
+                </div>
+                <div className="tm-dashboard-map__footer">
+                  <span>{manifest.site.caveat}</span>
+                  <Link href="/time-machine" className="tm-button tm-button--primary">
+                    Play the Time Machine →
+                  </Link>
+                </div>
+              </section>
+
+              <aside className="tm-dashboard-info">
+                <article className="tm-panel">
+                  <h2 className="tm-panel__title">Site record</h2>
+                  <h3>{manifest.site.title}</h3>
+                  <p className="tm-muted" style={{ marginTop: 8 }}>{manifest.site.description}</p>
+                  <p className="tm-muted tm-notice" style={{ marginTop: 12, padding: 10, borderRadius: 10 }}>
+                    {manifest.site.caveat}
+                  </p>
+                  <div className="tm-chip-row">
                     {[manifest.source.mission, `${manifest.source.band}-band`, manifest.source.product, manifest.source.maturity, `CRID ${manifest.source.crid}`].map((tag) => (
-                      <span key={tag} className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-200">{tag}</span>
+                      <span key={tag} className="tm-chip">{tag}</span>
                     ))}
                   </div>
                 </article>
@@ -286,9 +346,9 @@ export default function Home() {
                 />
 
                 {stats && (
-                  <article className="rounded-lg border border-slate-700/80 bg-[#111a24] p-5">
-                    <h2 className="text-sm font-semibold">Change statistics</h2>
-                    <p className="mt-1 text-xs text-slate-400">
+                  <article className="tm-panel">
+                    <h2 className="tm-panel__title">Change statistics</h2>
+                    <p className="tm-muted">
                       {manifest.pairs.find((pair) => pair.id === layer?.pair_id)?.label} · {polarization}
                       {layer?.pair_id
                         ? ` · ${layer.threshold_db ?? Object.keys(manifest.pairs.find((pair) => pair.id === layer.pair_id)?.stats[polarization] ?? {})[0]} dB threshold`
@@ -300,18 +360,18 @@ export default function Home() {
                       <div><dt className="text-slate-500">Valid coverage</dt><dd>{formatPercent(stats.valid_fraction_of_bbox)}</dd></div>
                       <div><dt className="text-slate-500">Noise estimate</dt><dd>{stats.sigma_db.toFixed(2)} dB</dd></div>
                     </dl>
-                    <p className="mt-3 text-[10px] text-slate-500">
+                    <p className="tm-muted" style={{ marginTop: 12 }}>
                       {stats.resampled ? "Post-event data were resampled to the pre-event grid." : "Acquisition grids were aligned."}
-                      {" "}Backscatter change does not determine its cause.
+                      {" "}Backscatter change does not determine its cause. These are measured outputs, not a
+                      validated scientific result.
                     </p>
                     {stats.histogram.length > 0 && (
-                      <div className="mt-4 flex h-12 items-end gap-px" aria-label="Difference histogram">
+                      <div className="tm-spark" aria-label="Difference histogram">
                         {stats.histogram.map((count, index) => (
-                          <span
+                          <i
                             key={index}
                             title={`Bin ${index + 1}: ${count} pixels`}
-                            className={`flex-1 ${index < stats.histogram.length / 2 ? "bg-blue-500/80" : "bg-red-400/80"}`}
-                            style={{ height: `${Math.max(2, count / Math.max(...stats.histogram, 1) * 100)}%` }}
+                            style={{ height: `${Math.max(4, count / Math.max(...stats.histogram, 1) * 100)}%` }}
                           />
                         ))}
                       </div>
@@ -319,12 +379,12 @@ export default function Home() {
                   </article>
                 )}
 
-                <section className="rounded-lg border border-slate-700/80 bg-[#111a24] p-5">
+                <section className="tm-panel">
                   <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-sm font-semibold">Acquisitions</h2>
-                    <span className="text-xs text-slate-400">{manifest.acquisitions.length} scenes</span>
+                    <h2 className="tm-panel__title" style={{ margin: 0 }}>Acquisitions</h2>
+                    <span className="tm-muted">{manifest.acquisitions.length} scenes</span>
                   </div>
-                  <ul className="max-h-64 space-y-2 overflow-auto">
+                  <ul className="max-h-56 space-y-2 overflow-auto">
                     {manifest.acquisitions.map((acquisition) => (
                       <li key={acquisition.granule} className="rounded border border-slate-700 bg-slate-900/70 p-3">
                         <button
@@ -348,26 +408,17 @@ export default function Home() {
                     ))}
                   </ul>
                 </section>
-              </section>
 
-              <section className="flex flex-col gap-5 xl:col-span-8">
-                <article className="h-[min(68vh,760px)] min-h-[420px]">
-                  <Map
-                    bbox={manifest.site.bbox}
-                    layers={visibleLayers}
-                    view={view}
-                    setView={setView}
-                  />
-                </article>
-                <section className="rounded-lg border border-slate-700/80 bg-[#111a24] p-5">
+                <section className="tm-panel">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <h2 className="text-sm font-semibold">Regional backscatter time series</h2>
-                      <p className="mt-1 text-xs text-slate-400">
-                        Mean {polarization} backscatter from the precomputed site stack. Select a point by clicking its acquisition below.
+                      <h2 className="tm-panel__title" style={{ margin: 0 }}>Regional time series</h2>
+                      <p className="tm-muted" style={{ marginTop: 4 }}>
+                        Mean {polarization} backscatter from the precomputed site stack. Select a point by clicking
+                        its acquisition below.
                       </p>
                     </div>
-                    <span className="text-xs text-slate-500" role="status">
+                    <span className="tm-muted" role="status">
                       {isLoadingSeries ? "Loading…" : `${timeSeries.length} observations`}
                     </span>
                   </div>
@@ -378,9 +429,8 @@ export default function Home() {
                           key={`${point.date}-${point.cycle}`}
                           type="button"
                           onClick={() => selectAcquisition(point.date)}
-                          className={`rounded border px-2 py-1 text-[10px] ${
-                            layer?.date === point.date ? "border-sky-500 bg-sky-950 text-white" : "border-slate-700 bg-slate-900 text-slate-300"
-                          }`}
+                          className={`tm-button ${layer?.date === point.date ? "" : "tm-button--ghost"}`}
+                          style={{ minHeight: 28, padding: "5px 9px", fontSize: 10 }}
                         >
                           {point.date} · Cycle {point.cycle} · {point.backscatter_db.toFixed(1)} dB · {point.maturity}
                         </button>
@@ -388,19 +438,23 @@ export default function Home() {
                     </div>
                   )}
                   {!timeSeries.length && !isLoadingSeries && (
-                    <p className="mt-4 text-xs text-slate-500">No time-series observations are available for this polarization.</p>
+                    <p className="tm-muted" style={{ marginTop: 16 }}>
+                      No time-series observations are available for this polarization.
+                    </p>
                   )}
                 </section>
+
                 {currentSite && (
-                  <p className="text-[10px] text-slate-500">
-                    {currentSite.acquisition_count} acquisitions · {currentSite.date_range.join(" to ")} · Source: ASF DAAC NISAR GCOV.
+                  <p className="tm-muted">
+                    {currentSite.acquisition_count} acquisitions · {currentSite.date_range.join(" to ")} · Source:
+                    ASF DAAC NISAR GCOV.
                   </p>
                 )}
-              </section>
+              </aside>
             </div>
           ) : null}
         </>
       )}
-    </main>
+    </AppShell>
   );
 }

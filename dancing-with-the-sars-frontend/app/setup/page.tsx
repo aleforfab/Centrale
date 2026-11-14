@@ -1,5 +1,5 @@
 import React from "react";
-import { SiteNav } from "@/components/SiteNav";
+import { AppShell } from "@/components/AppShell";
 
 export const metadata = {
   title: "Real-case setup · Dancing with the SARs",
@@ -116,17 +116,13 @@ const GATES: Gate[] = [
 
 export default function SetupPage() {
   return (
-    <main className="min-h-screen bg-[#0b1118] p-4 text-slate-100 sm:p-6 lg:p-8">
-      <header className="mb-3 border-b border-slate-700/70 pb-4">
-        <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-slate-500">Earth observation workspace</p>
-        <h1 className="text-2xl font-semibold tracking-tight">Real-case setup</h1>
-        <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">
-          The gates a topic must pass before it stops being a learning resource. Each gate names the evidence that
-          closes it. None of these gates is recorded as passed in this repository.
-        </p>
-      </header>
-
-      <SiteNav current="/setup" />
+    <AppShell
+      current="/setup"
+      eyebrow="Evidence gates"
+      title="Real-case setup"
+      subtitle="Eight gates a topic must pass before it stops being a learning resource. None is recorded as passed in this repository."
+      status={<span>8 gates · all status not recorded</span>}
+    >
 
       <section className="mb-6 rounded-lg border border-amber-700/50 bg-amber-950/20 p-4 text-xs leading-5 text-amber-100/90">
         <h2 className="text-sm font-semibold text-amber-200">Current state, stated plainly</h2>
@@ -172,6 +168,6 @@ export default function SetupPage() {
           with the reviewer, date, scope and limitations. A gate that is only &quot;believed to be done&quot; stays open.
         </p>
       </footer>
-    </main>
+    </AppShell>
   );
 }
