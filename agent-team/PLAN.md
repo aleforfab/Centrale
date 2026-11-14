@@ -93,3 +93,14 @@ after freeze except reverts of visibly broken things.
   Clone refspec is narrow (`main` + `arena/3ac4203d-centrale*`); supervisor
   fetched worker branches explicitly by ref. No merges performed; awaiting user
   go-ahead; merge order 01 → 03 → 02.
+- 2026-11-14 (later still): worker 03 handed in as DRAFT PR #10
+  `arena/95d96e92-centrale` (+2559/-0, 24 files, append-only new package
+  `nisar/insar/` + `routers/insar.py` + tests + `docs/INSAR.md`; one ANNOUNCEd
+  `main.py` append of 2 lines; CI green on final head; synthetic fixtures only;
+  everything labelled proposed; no compute endpoint; no UI exposure). Supervisor
+  inspected the diff: no forbidden files touched. Branch naming accepted as
+  `arena/*` for all workers (sessions pinned; contract's `feat/*` names were
+  unattainable there — no action needed). **All three slices are now handed in;
+  no merges performed.** Merge order 01 → 03 → 02 into `main` awaits user go.
+  Real Anak Krakatau build remains unrun (VM runbook ready:
+  `docs/ANAK_KRAKATAU_VM_BUILD.md`).
