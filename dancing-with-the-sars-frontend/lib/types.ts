@@ -100,4 +100,5 @@ export interface DataStatus {
   nisar_ready: boolean;
   sites_count: number;
   message: string;
+  live_fetch_enabled?: boolean;
 }

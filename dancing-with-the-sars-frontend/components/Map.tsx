@@ -57,7 +57,9 @@ function syncProductLayers(map: mapboxgl.Map, layers: ProductLayer[]) {
   layers.forEach((layer, index) => {
     const sourceId = `nisar-source-${layer.id}`;
     const layerId = `nisar-layer-${layer.id}`;
-    const tileUrl = new URL(layer.tile_url_template, `${api.baseUrl}/`).toString();
+    const tileUrl = api.baseUrl
+      ? new URL(layer.tile_url_template, `${api.baseUrl}/`).toString()
+      : new URL(layer.tile_url_template, window.location.origin).toString();
     const source = map.getSource(sourceId) as mapboxgl.RasterTileSource | undefined;
     if (source) {
       source.setTiles([tileUrl]);
