@@ -269,7 +269,7 @@
 
 .tm-dashboard-controls {
   display: grid;
-  grid-template-columns: minmax(200px, 1.2fr) 160px minmax(260px, 2fr) auto;
+  grid-template-columns: 160px minmax(260px, 1fr);
   gap: 12px;
   align-items: end;
   margin-bottom: 12px;
@@ -801,6 +801,8 @@
 .tm-compare__handle {
   position: absolute;
   top: 50%;
+  display: grid;
+  place-items: center;
   width: 42px;
   height: 42px;
   border: 0;
@@ -808,8 +810,7 @@
   background: #fff;
   color: #101820;
   transform: translate(-50%, -50%);
-  cursor: ew-resize;
-  pointer-events: auto;
+  pointer-events: none;
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.6);
 }
 
@@ -837,6 +838,52 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--tm-muted);
+}
+
+.tm-calendar {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid var(--tm-line);
+  border-radius: var(--tm-radius);
+  background: var(--tm-panel);
+  backdrop-filter: blur(12px);
+}
+
+.tm-calendar__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+
+.tm-calendar__label {
+  display: grid;
+  gap: 6px;
+  color: var(--tm-muted);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tm-calendar__label input,
+.tm-calendar__label select {
+  padding: 7px 9px;
+  border: 1px solid var(--tm-line);
+  border-radius: 9px;
+  background: rgba(5, 11, 18, 0.8);
+  color: var(--tm-text);
+  font-size: 12px;
+  letter-spacing: normal;
+  text-transform: none;
+  color-scheme: dark;
+}
+
+.tm-calendar__label input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.8;
+  cursor: pointer;
 }
 
 .tm-controls select,

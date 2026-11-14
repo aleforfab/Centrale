@@ -3,24 +3,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
-import { DanceChart } from "@/components/DanceChart";
 import { Map, type MapView } from "@/components/Map";
 import { api } from "@/lib/api";
 import type {
-  DataStatus,
   PairStats,
   ProductLayer,
   SiteManifest,
   SiteSummary,
-  TimeSeriesPoint as ApiTimeSeriesPoint,
 } from "@/lib/types";
-
-interface ChartPoint {
-  date: string;
-  backscatter: number;
-  cycle: number;
-  maturity: string;
-}
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "An unexpected request error occurred.";
@@ -48,21 +38,17 @@ export default function Home() {
   const [polarization, setPolarization] = useState("");
   const [layerId, setLayerId] = useState("");
   const [visibleLayerIds, setVisibleLayerIds] = useState<string[]>([]);
-  const [timeSeries, setTimeSeries] = useState<ApiTimeSeriesPoint[]>([]);
-  const [status, setStatus] = useState<DataStatus | null>(null);
-  const [view, setView] = useState<MapView>("sar");
+  const [view, setView] = useState<MapView>("optical");
   const [isLoadingSites, setIsLoadingSites] = useState(true);
   const [isLoadingManifest, setIsLoadingManifest] = useState(false);
-  const [isLoadingSeries, setIsLoadingSeries] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    Promise.all([api.sites(), api.dataStatus()])
-      .then(([siteList, dataStatus]) => {
+    api.sites()
+      .then((siteList) => {
         if (!active) return;
         setSites(siteList);
-        setStatus(dataStatus);
         setSiteId((current) => current || siteList[0]?.id || "");
       })
       .catch((reason: unknown) => {
@@ -79,13 +65,11 @@ export default function Home() {
   useEffect(() => {
     if (!siteId) {
       setManifest(null);
-      setTimeSeries([]);
       return;
     }
     let active = true;
     setIsLoadingManifest(true);
     setManifest(null);
-    setTimeSeries([]);
     setError(null);
     api.site(siteId)
       .then((siteManifest) => {
@@ -109,25 +93,6 @@ export default function Home() {
     };
   }, [siteId]);
 
-  useEffect(() => {
-    if (!manifest || !polarization) return;
-    let active = true;
-    setIsLoadingSeries(true);
-    api.timeseries(manifest.site.id, polarization)
-      .then((points) => {
-        if (active) setTimeSeries(points);
-      })
-      .catch((reason: unknown) => {
-        if (active) setError(errorMessage(reason));
-      })
-      .finally(() => {
-        if (active) setIsLoadingSeries(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [manifest, polarization]);
-
   const polLayers = useMemo(
     () => manifest?.layers.filter((layer) => !layer.pol || layer.pol === polarization) ?? [],
     [manifest, polarization],
@@ -137,14 +102,7 @@ export default function Home() {
     const active = polLayers.filter((item) => visibleLayerIds.includes(item.id));
     return layer && active.includes(layer) ? [layer, ...active.filter((item) => item.id !== layer.id)] : active;
   }, [layer, polLayers, visibleLayerIds]);
-  const chartData: ChartPoint[] = timeSeries.map((point) => ({
-    date: point.date,
-    backscatter: point.backscatter_db,
-    cycle: point.cycle,
-    maturity: point.maturity,
-  }));
   const stats = selectedStats(layer, manifest, polarization);
-  const currentSite = sites.find((site) => site.id === siteId);
 
   useEffect(() => {
     if (!layer || layer.id === layerId) return;
@@ -163,19 +121,12 @@ export default function Home() {
     if (backscatterLayer) setLayerId(backscatterLayer.id);
   };
 
-  const statusLabel = status
-    ? status.nisar_ready
-      ? `NISAR products ready · ${status.sites_count} site${status.sites_count === 1 ? "" : "s"}`
-      : status.active_source
-    : "Checking data availability…";
-
   return (
     <AppShell
       current="/"
       eyebrow="Map-first explorer"
       title="Dancing with the SARs"
       subtitle="Installed NISAR product layers, exact dates and measured change products in a cinematic radar workspace."
-      status={<span>{statusLabel}</span>}
     >
       <section className="tm-hero">
         <div>
@@ -209,11 +160,11 @@ export default function Home() {
 
       {isLoadingSites ? (
         <div className="tm-panel" style={{ display: "grid", minHeight: 320, placeItems: "center" }}>
-          <p className="tm-muted">Loading NISAR site catalog…</p>
+          <p className="tm-muted">Loading product catalog…</p>
         </div>
       ) : sites.length === 0 ? (
         <section className="tm-panel tm-notice" style={{ margin: "48px auto", maxWidth: 720, textAlign: "center", padding: 32 }}>
-          <h2>No precomputed NISAR sites yet</h2>
+          <h2>No precomputed products yet</h2>
           <p className="tm-muted" style={{ marginTop: 12 }}>
             This interface only displays built NISAR products; it does not substitute Sentinel-1 analysis or
             create results on demand.
@@ -221,21 +172,10 @@ export default function Home() {
           <p className="mt-4 rounded bg-slate-950 p-3 font-mono text-xs text-slate-300">
             python -m nisar.cli build-site --config sites/&lt;site&gt;.yaml
           </p>
-          {status && <p className="tm-muted" style={{ marginTop: 12 }}>{status.message}</p>}
         </section>
       ) : (
         <>
           <div className="tm-dashboard-controls">
-            <label>
-              NISAR site
-              <select
-                value={siteId}
-                onChange={(event) => setSiteId(event.target.value)}
-                className="mt-1 block w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white"
-              >
-                {sites.map((site) => <option key={site.id} value={site.id}>{site.title}</option>)}
-              </select>
-            </label>
             <label>
               Polarization
               <select
@@ -263,11 +203,6 @@ export default function Home() {
                 {polLayers.map((item) => <option key={item.id} value={item.id}>{item.title ?? item.id}</option>)}
               </select>
             </label>
-            <div className="tm-dashboard-controls__meta">
-              <span>{manifest?.acquisitions.length ?? 0} acquisitions</span>
-              <span>{polLayers.length} layers</span>
-              <span>{view === "sar" ? "NISAR view" : "Optical context"}</span>
-            </div>
           </div>
 
           {polLayers.length > 1 && (
@@ -339,12 +274,6 @@ export default function Home() {
                   </div>
                 </article>
 
-                <DanceChart
-                  data={chartData}
-                  polarization={polarization}
-                  selectedDate={layer?.date ?? undefined}
-                />
-
                 {stats && (
                   <article className="tm-panel">
                     <h2 className="tm-panel__title">Change statistics</h2>
@@ -409,47 +338,6 @@ export default function Home() {
                   </ul>
                 </section>
 
-                <section className="tm-panel">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <h2 className="tm-panel__title" style={{ margin: 0 }}>Regional time series</h2>
-                      <p className="tm-muted" style={{ marginTop: 4 }}>
-                        Mean {polarization} backscatter from the precomputed site stack. Select a point by clicking
-                        its acquisition below.
-                      </p>
-                    </div>
-                    <span className="tm-muted" role="status">
-                      {isLoadingSeries ? "Loading…" : `${timeSeries.length} observations`}
-                    </span>
-                  </div>
-                  {timeSeries.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {timeSeries.map((point) => (
-                        <button
-                          key={`${point.date}-${point.cycle}`}
-                          type="button"
-                          onClick={() => selectAcquisition(point.date)}
-                          className={`tm-button ${layer?.date === point.date ? "" : "tm-button--ghost"}`}
-                          style={{ minHeight: 28, padding: "5px 9px", fontSize: 10 }}
-                        >
-                          {point.date} · Cycle {point.cycle} · {point.backscatter_db.toFixed(1)} dB · {point.maturity}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {!timeSeries.length && !isLoadingSeries && (
-                    <p className="tm-muted" style={{ marginTop: 16 }}>
-                      No time-series observations are available for this polarization.
-                    </p>
-                  )}
-                </section>
-
-                {currentSite && (
-                  <p className="tm-muted">
-                    {currentSite.acquisition_count} acquisitions · {currentSite.date_range.join(" to ")} · Source:
-                    ASF DAAC NISAR GCOV.
-                  </p>
-                )}
               </aside>
             </div>
           ) : null}

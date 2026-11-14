@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { buildComparison, clampReveal, revealFromPointer } from "@/lib/comparison";
+import React, { useEffect, useMemo, useState } from "react";
+import { buildComparison, clampReveal } from "@/lib/comparison";
 import {
   SYNTHETIC_NOTICE,
   buildMockManifest,
@@ -25,8 +25,7 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
   const [beforeDate, setBeforeDate] = useState<string>("");
   const [afterDate, setAfterDate] = useState<string>("");
   const [reveal, setReveal] = useState(50);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const draggingRef = useRef(false);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
 
   const dates = scan?.dates ?? [];
   const frames = useMemo(
@@ -42,7 +41,9 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
   const hasPlayback = Boolean(scan?.features.includes("playback"));
   const hasCompare = Boolean(scan?.features.includes("compare"));
   const hasProvenance = Boolean(scan?.features.includes("provenance"));
-  const pairOrderValid = Boolean(beforeDate && afterDate && beforeDate < afterDate);
+  const exactPairDates = dates.includes(beforeDate) && dates.includes(afterDate);
+  const pairOrderValid = exactPairDates && Boolean(beforeDate && afterDate && beforeDate < afterDate);
+  const clampedReveal = clampReveal(reveal);
 
   const mockManifest = useMemo(
     () => (scan && pairOrderValid ? buildMockManifest(scan, beforeDate, afterDate, scan.pol) : null),
@@ -60,6 +61,8 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
     setBeforeDate(scan.beforeDate ?? scan.dates[0]);
     setAfterDate(scan.afterDate ?? scan.dates[scan.dates.length - 1]);
     setMode(scan.dateMode === "pair" ? "pair" : "single");
+    setReveal(50);
+    setCalendarError(null);
   }, [scan]);
 
   useEffect(() => {
@@ -80,13 +83,18 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
     return () => window.clearInterval(timer);
   }, [scan, mode, playing, speed, dates.length]);
 
-  const updateReveal = (clientX: number) => {
-    const box = wrapperRef.current?.getBoundingClientRect();
-    if (!box) return;
-    setReveal(clampReveal(revealFromPointer(clientX, box.left, box.width)));
+  const selectExactDate = (value: string) => {
+    const exactIndex = dates.indexOf(value);
+    if (exactIndex < 0) {
+      setCalendarError(
+        `No observation exists on ${value || "that date"}. Choose one of the exact dates; no substitute is used.`,
+      );
+      return;
+    }
+    setCalendarError(null);
+    setIndex(exactIndex);
+    setPlaying(false);
   };
-
-  const clampedReveal = clampReveal(reveal);
 
   const stage = () => {
     if (loading) {
@@ -140,7 +148,7 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
           <div className="tm-stage">
             <div className="tm-stage__empty">
               <div className="tm-problem">
-                The before date must be earlier than the after date. No substitute date, polarization or
+                Choose two exact installed dates in chronological order. No substitute date, polarization or
                 difference layer is used.
               </div>
             </div>
@@ -162,23 +170,7 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
       }
 
       return (
-        <div
-          ref={wrapperRef}
-          className="tm-stage"
-          onPointerDown={(event) => {
-            draggingRef.current = true;
-            event.currentTarget.setPointerCapture(event.pointerId);
-            updateReveal(event.clientX);
-          }}
-          onPointerMove={(event) => {
-            if (draggingRef.current) updateReveal(event.clientX);
-          }}
-          onPointerUp={(event) => {
-            draggingRef.current = false;
-            event.currentTarget.releasePointerCapture(event.pointerId);
-          }}
-          onPointerCancel={() => { draggingRef.current = false; }}
-        >
+        <div className="tm-stage">
           <img className="tm-compare__img" src={beforeFrame.url} alt={`Synthetic before frame for ${beforeDate}`} />
           <img
             className="tm-compare__img tm-compare__after"
@@ -196,29 +188,10 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
             <span>After</span>
             <strong>{afterDate}</strong>
           </div>
-          <div className="tm-compare__divider" style={{ left: `${clampedReveal}%` }} />
-          <button
-            type="button"
-            className="tm-compare__handle"
-            style={{ left: `${clampedReveal}%` }}
-            role="slider"
-            aria-label="Reveal before and after frames"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(clampedReveal)}
-            aria-orientation="horizontal"
-            onKeyDown={(event) => {
-              const step = event.shiftKey ? 10 : 2;
-              if (event.key === "ArrowLeft") setReveal(clampReveal(clampedReveal - step));
-              else if (event.key === "ArrowRight") setReveal(clampReveal(clampedReveal + step));
-              else if (event.key === "Home") setReveal(0);
-              else if (event.key === "End") setReveal(100);
-              else return;
-              event.preventDefault();
-            }}
-          >
+          <div className="tm-compare__divider" style={{ left: `${clampedReveal}%` }} aria-hidden="true" />
+          <div className="tm-compare__handle" style={{ left: `${clampedReveal}%` }} aria-hidden="true">
             ↔
-          </button>
+          </div>
           <div className="tm-stage__legend"><span>Weak</span><i /><span>Strong return</span></div>
         </div>
       );
@@ -253,7 +226,7 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
             type="button"
             className={`tm-button ${mode === "single" ? "" : "tm-button--ghost"}`}
             aria-pressed={mode === "single"}
-            onClick={() => { setMode("single"); setPlaying(false); }}
+            onClick={() => { setMode("single"); setPlaying(false); setCalendarError(null); }}
           >
             One event date
           </button>
@@ -261,7 +234,7 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
             type="button"
             className={`tm-button ${mode === "pair" ? "" : "tm-button--ghost"}`}
             aria-pressed={mode === "pair"}
-            onClick={() => { setMode("pair"); setPlaying(false); }}
+            onClick={() => { setMode("pair"); setPlaying(false); setCalendarError(null); }}
             disabled={!scan || !hasCompare}
           >
             Two dates to compare
@@ -273,6 +246,23 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
 
         {mode === "single" ? (
           <>
+            <div className="tm-calendar__row">
+              <label className="tm-calendar__label">
+                Event date
+                <input
+                  type="date"
+                  value={singleDate}
+                  min={dates[0] ?? ""}
+                  max={dates[dates.length - 1] ?? ""}
+                  disabled={!scan || !hasBackscatter}
+                  onChange={(event) => selectExactDate(event.target.value)}
+                  aria-label="Event date"
+                />
+              </label>
+              <p className="tm-muted" style={{ alignSelf: "end", margin: 0 }}>
+                The calendar accepts exact installed dates only.
+              </p>
+            </div>
             <label style={{ display: "grid", gap: 6 }}>
               <span className="tm-muted">Choose one event date (before or after) with the slider</span>
               <input
@@ -282,7 +272,7 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
                 step={1}
                 value={safeIndex}
                 disabled={!scan || !hasBackscatter}
-                onChange={(event) => { setIndex(Number(event.target.value)); setPlaying(false); }}
+                onChange={(event) => { setIndex(Number(event.target.value)); setPlaying(false); setCalendarError(null); }}
                 aria-label="Observation date timeline"
               />
             </label>
@@ -326,21 +316,34 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
               </label>
               {!hasPlayback && <span className="tm-muted">Enable “Playback” in feature choices for play/pause.</span>}
             </div>
+            {calendarError && <p className="tm-problem" role="alert">{calendarError}</p>}
           </>
         ) : (
           <>
-            <div className="tm-controls__row">
-              <label>
+            <div className="tm-calendar__row">
+              <label className="tm-calendar__label">
                 Before date
-                <select value={beforeDate} onChange={(event) => setBeforeDate(event.target.value)} disabled={!scan}>
-                  {dates.map((date) => <option key={date} value={date}>{date}</option>)}
-                </select>
+                <input
+                  type="date"
+                  value={beforeDate}
+                  min={dates[0] ?? ""}
+                  max={dates[dates.length - 1] ?? ""}
+                  onChange={(event) => setBeforeDate(event.target.value)}
+                  disabled={!scan}
+                  aria-label="Before date"
+                />
               </label>
-              <label>
+              <label className="tm-calendar__label">
                 After date
-                <select value={afterDate} onChange={(event) => setAfterDate(event.target.value)} disabled={!scan}>
-                  {dates.map((date) => <option key={date} value={date}>{date}</option>)}
-                </select>
+                <input
+                  type="date"
+                  value={afterDate}
+                  min={dates[0] ?? ""}
+                  max={dates[dates.length - 1] ?? ""}
+                  onChange={(event) => setAfterDate(event.target.value)}
+                  disabled={!scan}
+                  aria-label="After date"
+                />
               </label>
               <label style={{ flex: 1, minWidth: 220 }}>
                 Reveal — {clampedReveal.toFixed(0)}%
@@ -354,9 +357,13 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
                 />
               </label>
             </div>
+            <div className="tm-chip-row" aria-label="Exact installed dates">
+              {dates.map((date) => <span key={date} className="tm-chip">{date}</span>)}
+            </div>
             <p className="tm-muted">
-              Exactly two installed observation dates are used. The viewer refuses to substitute a neighbouring
-              date, a different polarization, or a difference/change-mask layer.
+              Only the slider changes the split. Clicking or dragging on the imagery does nothing. Exactly two
+              installed observation dates are used; the viewer refuses to substitute a neighbouring date, a
+              different polarization, or a difference/change-mask layer.
             </p>
             {comparison && comparison.ok && (
               <p className="tm-muted">

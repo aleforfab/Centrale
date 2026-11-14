@@ -9,7 +9,7 @@ Three preview processes are running with synthetic data only:
 
 | Preview | Port | What it shows |
 |---|---:|---|
-| Frontend redesign preview | `3000` | The current Next.js app: `/`, `/compare`, `/applications`, `/setup` |
+| Frontend redesign preview | `3000` | The current Next.js app: `/`, `/compare`, `/time-machine` |
 | SAR Time Machine prototype | `8765` | The standalone image-based evolution / swipe-compare player |
 | NISAR API | `8000` | FastAPI data and product endpoints behind the Next.js proxy |
 
@@ -89,7 +89,7 @@ High-contrast light theme, clear typography, white panels and strong data tables
 ## Scope choices for the next iteration
 
 1. **Design-only first**: produce wireframes / a visual concept, change no app code.
-2. **Restyle existing routes**: unify `/`, `/compare`, `/applications` and `/setup` with a new design system.
+2. **Restyle existing routes**: unify `/` and `/compare` with a new design system; `/applications` and `/setup` were later retired.
 3. **Integrate Time Machine interactions**: add playback/scrub/swipe to the Next.js app using existing manifest layers and exact-date rules.
 4. **Build one new `/time-machine` route**: keep the current app intact and add a focused player route.
 
@@ -105,26 +105,31 @@ From `CONTRIBUTING.md` and the current tests:
 
 ## Shared-file heads-up
 
-One shared shell file was changed additively: `components/SiteNav.tsx` now links to `/time-machine` and uses the new pill navigation. No other shared files were edited: `app/layout.tsx`, `lib/types.ts`, `lib/api.ts`, `package.json`, the lockfile, CI, `README.md` and `CONTRIBUTING.md` are untouched. The `docs/` file here is additive only.
+One shared shell file was changed: `components/SiteNav.tsx` uses the pill navigation and now links only `/`, `/compare` and `/time-machine`; the retired `/applications` and `/setup` links were removed. No other shared files were edited: `app/layout.tsx`, `lib/types.ts`, `lib/api.ts`, `package.json`, the lockfile, CI, `README.md` and `CONTRIBUTING.md` are untouched. The `docs/` file here is additive only.
 
 ## Implementation status — 2026-11-14
 
-The chosen deliverable is a clickable Next.js prototype on the map-first cinematic direction. All four current routes (`/`, `/compare`, `/applications`, `/setup`) now share `components/AppShell.tsx` and `app/redesign.css`; the new `/time-machine` route is the integrated Time Machine workspace.
+For the end-to-end feature/backend/processing audit, see
+[`FULL_FEATURE_AUDIT.md`](FULL_FEATURE_AUDIT.md). This brief records the design
+and UI implementation; the audit records what was actually verified and what is
+still blocking a real deployment.
+
+The chosen deliverable is a clickable Next.js prototype on the map-first cinematic direction. The current routes (`/`, `/compare`, `/time-machine`) share `components/AppShell.tsx` and `app/redesign.css`; `/applications` and `/setup` were removed from the route tree and navigation.
 
 | Requested feature | Where it lives | Prototype behaviour |
 |---|---|---|
-| Restyle all current routes | `AppShell`, `redesign.css`, all four page files | Dark cinematic shell, glass panels, large map, compact controls, derived capability labels and honest empty states remain intact |
-| Mapbox region selection | `components/RegionSelector.tsx` | Draw/pan modes, drag-to-draw bbox, “use current view”, manual coordinates, visible bbox chips. A local Mapbox GL grid stands in for the basemap when no URL-restricted token is configured |
+| Restyle current routes | `AppShell`, `redesign.css`, `/`, `/compare`, `/time-machine` | Dark cinematic shell, glass panels, large optical-first map, compact controls, calendar date inputs and honest empty states remain intact |
+| Mapbox region selection | `components/RegionSelector.tsx` | Draw/pan modes, drag-to-draw bbox, “use current view”, manual coordinates, visible bbox chips. The initial Mapbox style is optical satellite imagery; a local grid is only a fallback if the style cannot load |
 | Start scan from selected region | `POST /tm/scan`, “Start scan for selected region” button | Validates bbox and selected features, then returns eight ordered synthetic frames keyed by the exact bbox, polarization and feature set |
 | Choices for features selected | `components/FeatureChoices.tsx`, `lib/timeMachine.ts` | Backscatter, difference, mask, time series, provenance, playback and two-date compare; the right rail shows a panel for each selected feature |
 | Keep the slider | `components/TimeReview.tsx` | One event-date timeline slider with before/after event labels and a compare reveal slider |
 | Add playback | `TimeReview` | Play/pause, 0.5×–4× speed, equal time per dated frame, reduced-motion guard |
-| One event date or two dates | `TimeReview`, scan options | Mode toggle: one event date (before/after) or two exact dates to compare; pair mode has before/after selects and a draggable/keyboard-operable reveal handle |
+| One event date or two dates | `TimeReview`, scan options, `/compare` | Mode toggle: one event date (before/after) or two exact dates to compare; calendar date inputs replace date selects, and only the range slider changes the before/after visual |
 | Exact-date honesty | `lib/comparison.ts`, `buildMockManifest()` | Only `backscatter` observation layers enter the mock manifest; no substitute date, polarization, difference or change-mask layer is used |
 
 ### Backend support check
 
-`POST /api/nisar/fetch` in the FastAPI backend already accepts an arbitrary `bbox`, `start_date`, `end_date`, `maturity`, `polarizations` and `max_granules`. It is not used by the prototype button: the preview has live fetch disabled and no Earthdata credentials, and no real NISAR granule was downloaded or processed. The button calls local route handlers that generate deterministic SVG frames from the selected bbox and feature set. A production integration still needs tile loading, projection, camera synchronisation, exact-date gating, provenance and attribution.
+`POST /api/nisar/fetch` in the FastAPI backend already accepts an arbitrary `bbox`, `start_date`, `end_date`, `maturity`, `polarizations` and `max_granules`. It is not called by the prototype button: the button uses local route handlers that generate deterministic SVG frames from the selected bbox and feature set, and no real NISAR granule was downloaded or processed. A real live build still needs Earthdata credentials and the operator API. A production integration also needs tile loading, projection, camera synchronisation, exact-date gating, provenance and attribution.
 
 ### Honesty invariants preserved
 
@@ -137,7 +142,8 @@ The chosen deliverable is a clickable Next.js prototype on the map-first cinemat
 ### Verification
 
 - Backend: `ruff check .` → `All checks passed!`; `pytest -q` → `110 passed, 11 warnings`.
-- Frontend: `npm ci`, `npm run typecheck`, `npm test` → `5 files / 67 tests passed`; `npm run build` → `9/9` pages generated, including `/time-machine`, `/tm/scan` and `/tm/frames/[date]`.
+- Frontend: `npm ci`, `npm run typecheck`, `npm test` → `6 files / 65 tests passed`; `npm run build` → `7/7` pages generated, including `/time-machine`, `/tm/scan` and `/tm/frames/[date]`.
 - CI compatibility: the first pull-request run exposed that `jsdom@31` needs Node 22 while the existing CI workflow pins Node 20. The jsdom-only interaction test was removed instead of changing shared `package.json`, the lockfile or CI. Server-rendered control checks remain in the Node-environment suite, and no app code changed in that fix.
-- Live HTTP checks: `/`, `/compare`, `/applications`, `/setup`, `/time-machine`, `/api/data-status`, `/api/sites`, `/api/sites/demo-fixture`, `/tm/scan`, a synthetic frame, one product PNG tile, backend `/health` and the standalone prototype all returned `200`; preview-like Host headers also returned `200`.
-- No real Mapbox basemap is claimed: the preview uses `NEXT_PUBLIC_MAPBOX_TOKEN=dummy_token`, so product tiles and the local Mapbox GL canvas are available but a real tiled Mapbox basemap is unverified.
+- Live HTTP checks: `/`, `/compare`, `/time-machine`, `/api/data-status`, `/api/sites`, `/api/sites/demo-fixture`, `/tm/scan`, a synthetic frame, one product PNG tile and backend `/health` return `200`; the retired `/applications` and `/setup` routes return `404`.
+- The public `pk.*` Mapbox token is committed in `lib/mapboxToken.ts` and used as fallback when no valid environment override exists; CI's `dummy_token` no longer disables the basemap. The Mapbox Satellite Streets v12 style endpoint accepted the token. Initial region selector and dashboard map request optical satellite imagery; actual raster-tile rendering in a browser was not visually verified from the sandbox, and the local grid remains the fallback if Mapbox is unreachable.
+- The dashboard backscatter graph and regional time-series controls were removed to reduce information density. Interferometry and angle normalization are now selectable *proposed* feature panels; neither computes a result from GCOV backscatter.

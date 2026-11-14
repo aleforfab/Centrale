@@ -8,10 +8,12 @@ import { buildComparison } from "@/lib/comparison";
 import {
   DEFAULT_BBOX,
   DEFAULT_FEATURES,
+  FEATURE_OPTIONS,
   SCAN_DATES,
   SYNTHETIC_NOTICE,
   buildMockManifest,
   frameUrl,
+  isFeatureId,
   isValidBbox,
   scanFrames,
   type ScanResult,
@@ -124,6 +126,19 @@ describe("Time Machine scan contract", () => {
     expect(noFeatures.status).toBe(400);
   });
 
+  it("refuses a calendar date that is not an exact installed date", async () => {
+    const response = await scanPost(jsonRequest({
+      bbox: DEFAULT_BBOX,
+      features: ["backscatter", "compare"],
+      dateMode: "pair",
+      pol: "HH",
+      beforeDate: "2026-09-02",
+      afterDate: SCAN_DATES[3],
+    }));
+    expect(response.status).toBe(400);
+    expect((await response.json()).detail).toContain("exact installed dates");
+  });
+
   it("serves an explicitly labelled synthetic frame and rejects an unknown date", async () => {
     const known = await frameGet(
       new Request(`http://localhost/tm/frames/${SCAN_DATES[0]}?bbox=${DEFAULT_BBOX.join(",")}&pol=HH&features=backscatter`),
@@ -143,11 +158,27 @@ describe("Time Machine scan contract", () => {
   });
 });
 
+describe("proposed science features", () => {
+  it("offers normalization and interferometry as explicit proposals, not default results", () => {
+    expect(isFeatureId("normalization")).toBe(true);
+    expect(isFeatureId("insar")).toBe(true);
+    expect(DEFAULT_FEATURES).not.toContain("normalization");
+    expect(DEFAULT_FEATURES).not.toContain("insar");
+    const normalization = FEATURE_OPTIONS.find((option) => option.id === "normalization");
+    const insar = FEATURE_OPTIONS.find((option) => option.id === "insar");
+    expect(normalization?.label).toContain("proposed");
+    expect(normalization?.description).toContain("not applied");
+    expect(insar?.label).toContain("proposed");
+    expect(insar?.description).toContain("phase-capable");
+  });
+});
+
 describe("TimeReview server-rendered controls", () => {
   it("shows the slider, playback control, exact-date modes and synthetic notice", () => {
     const html = renderToStaticMarkup(
       React.createElement(TimeReview, { scan: scanResult, loading: false }),
     );
+    expect(html).toContain('type="date"');
     expect(html).toContain("Observation date timeline");
     expect(html).toContain("Play evolution");
     expect(html).toContain("One event date");

@@ -44,12 +44,23 @@ export async function POST(request: Request): Promise<Response> {
     ? payload.pol.toUpperCase()
     : DEFAULT_POL;
 
-  const beforeDate = SCAN_DATES.includes(payload.beforeDate as (typeof SCAN_DATES)[number])
-    ? payload.beforeDate
-    : undefined;
-  const afterDate = SCAN_DATES.includes(payload.afterDate as (typeof SCAN_DATES)[number])
-    ? payload.afterDate
-    : undefined;
+  const requestedBefore = payload.beforeDate;
+  const requestedAfter = payload.afterDate;
+  const invalidDate =
+    (requestedBefore !== undefined && !SCAN_DATES.includes(requestedBefore as (typeof SCAN_DATES)[number])) ||
+    (requestedAfter !== undefined && !SCAN_DATES.includes(requestedAfter as (typeof SCAN_DATES)[number]));
+  if (invalidDate) {
+    return json({ detail: "Choose exact installed dates. No substitute date is used." }, 400);
+  }
+
+  const beforeDate = requestedBefore;
+  const afterDate = requestedAfter;
+  if (dateMode === "pair" && (!beforeDate || !afterDate || beforeDate >= afterDate)) {
+    return json(
+      { detail: "Choose two exact installed dates in chronological order. No substitute date is used." },
+      400,
+    );
+  }
 
   const result: ScanResult = {
     id: "prototype-scan",

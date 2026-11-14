@@ -3,8 +3,6 @@ import Link from "next/link";
 const LINKS = [
   { href: "/", label: "Dashboard" },
   { href: "/compare", label: "Before / after" },
-  { href: "/applications", label: "Applications" },
-  { href: "/setup", label: "Real-case setup" },
   { href: "/time-machine", label: "Time Machine" },
 ];
 
