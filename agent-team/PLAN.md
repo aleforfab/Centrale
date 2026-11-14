@@ -77,3 +77,19 @@ after freeze except reverts of visibly broken things.
   Gate 1 recorded approved; Gate 2 (VM go-live) NOT approved.
 - Next: commit + push `agent-team/`, print launch cards, await human to open the
   three worker sessions; then integrate.
+- 2026-11-14 (later, supervisor): workers 01 and 02 handed in as DRAFT PRs —
+  PR #9 `arena/29b33504-centrale` (+1323/-48, 9 files, backend-only + ANNOUNCE
+  models.py; CI green; convention σ⁰=γ⁰×rtcGammaToSigmaFactor **confirmed against
+  NISAR Data Product Format Document V1.2.1 (eq. 7; per-pixel float32 grid)**) and
+  PR #8 `arena/7f70de26-centrale` (+733/-377, 9 files, frontend-only + ANNOUNCE
+  types.ts; CI green; 70 tests; playback backscatter-only, exact dates, demo CTA
+  labelled). Worker 03 (InSAR): **no branch/PR yet**. Supervisor drafted
+  `docs/ANAK_KRAKATAU_VM_BUILD.md` (NOT executed) and resolved the normalize
+  convention via public NISAR product documentation. Note: remote carries
+  pre-migration branches (e.g. `arena/535a4271-centrale` live-fetch,
+  `arena/d252cdc7-centrale` VM runbook) with no merge base to current `main` —
+  they are the pre-migration lineage whose content is already imported into
+  `main` (LIVE_FETCH.md, GCP_CHECKLIST.md, live_fetch.py); do not rebase them.
+  Clone refspec is narrow (`main` + `arena/3ac4203d-centrale*`); supervisor
+  fetched worker branches explicitly by ref. No merges performed; awaiting user
+  go-ahead; merge order 01 → 03 → 02.
