@@ -46,24 +46,50 @@ an older tree than the one that was verified.
 Update later with `git pull --ff-only`, which refuses to create a surprise merge
 commit on the VM.
 
-## Step 2 — Decide the Python interpreter before installing anything
+## Step 2 — Python environment (the wheel question is answered)
 
-The backend was tested under Python 3.11. The VM has Python 3.13. The pinned
-geospatial stack (`rasterio`, `h5py`, `pyproj`, `scipy`) may not publish wheels
-for 3.13 on this platform, and a source build of GDAL/PROJ is slow and fragile.
+**Verified on the VM on 2026-11-14.** A throwaway venv on Python 3.13.5 resolved
+native wheels for every package, including the compiled geospatial stack:
 
-Check first, without changing the system Python:
+| Package | Wheel installed on the VM (cp313) |
+| --- | --- |
+| rasterio | 1.5.2 |
+| h5py | 3.16.0 |
+| pyproj | 3.8.0 |
+| scipy | 1.18.1 |
+| numpy | 2.5.4 |
+| pydantic | 2.14.3 |
+| fastapi | 0.162.7 |
+
+So no GDAL/PROJ source build is needed, and the Python 3.11 fallback is **not**
+required. Debian's system Python stays untouched; everything lives in a venv.
+
+### Expect slightly newer versions than CI tests
+
+Pinned lower bounds in `requirements.txt` mean the VM takes the newest compatible
+release. On Python 3.11 (what CI and the agent sandbox use) pip resolves
+**rasterio 1.4.4 / numpy 2.4.6 / pyproj 3.7.2 / scipy 1.17.1**, because newer
+releases have no 3.11 wheels. On 3.13 it takes rasterio 1.5.x and numpy 2.5.x
+instead.
+
+Consequence: **`pytest` on the VM is the decisive check**, not the sandbox run. If
+it fails, compare the installed versions against the table above before changing
+any code, and pin the version that works rather than upgrading the interpreter.
 
 ```bash
 cd ~/centrale/dancing-with-sars-backend
 python3 -m venv .venv
 ./.venv/bin/pip install --upgrade pip
-./.venv/bin/pip install -r requirements.txt
+./.venv/bin/pip install -r requirements.txt -r requirements-dev.txt
+./.venv/bin/python -m pytest -q
 ```
 
-Report the full output if it fails. If a wheel is missing, the preferred fix is a
-separately installed supported interpreter (for example a `python3.11` venv via
-`uv` or `deadsnakes`), not replacing Debian's `python3`.
+Expected: 78 passed. `-r requirements-dev.txt` adds `pytest`, `httpx` and `ruff`,
+which are needed for the checks but not for serving.
+
+If a wheel were ever missing, the preferred fix is a separately installed
+supported interpreter (a `uv`-managed 3.11 venv), never replacing Debian's
+`python3`.
 
 ## Step 3 — Backend tests
 
@@ -161,7 +187,7 @@ Confirm in the console:
 | Step | Status |
 | --- | --- |
 | 1 Clone | not started |
-| 2 Python environment | not started. Python 3.13 wheel availability is still unverified; the sandbox used 3.11 |
+| 2 Python environment | **wheel check done** on the VM (3.13.5, all wheels resolved). Full install and `pytest` still pending |
 | 3 Backend tests on VM | not started |
 | 4 Synthetic rehearsal on VM | not started |
 | 5 Frontend build on VM | not started |
