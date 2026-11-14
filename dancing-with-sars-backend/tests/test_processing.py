@@ -72,6 +72,42 @@ class TestSmoothLinear:
         assert smoothed.shape == power.shape
         assert np.any(np.isfinite(smoothed))
 
+    def test_smooth_linear_nan_does_not_erase_neighbours(self):
+        """An invalid pixel must not blank the valid pixels around it.
+
+        Regression test: the previous implementation multiplied NaN by the
+        validity mask, so NaN survived the multiplication and the boxcar mean
+        poisoned every window touching an invalid pixel.
+        """
+        power = np.ones((5, 5), dtype=np.float32)
+        power[2, 2] = np.nan
+
+        smoothed = smooth_linear(power, kernel_size=3)
+
+        # Every pixel whose window contains at least one valid value stays defined.
+        assert np.isfinite(smoothed).all()
+        # Values remain the mean of the valid neighbours (all 1.0 here).
+        np.testing.assert_allclose(smoothed, np.ones_like(power), rtol=1e-5)
+
+    def test_smooth_linear_all_invalid_window_stays_nan(self):
+        """A window with no valid pixels must produce NaN, not a fake zero."""
+        power = np.zeros((3, 3), dtype=np.float32)
+
+        smoothed = smooth_linear(power, kernel_size=3)
+
+        assert np.isnan(smoothed).all()
+
+    def test_smooth_linear_sparse_valid_pixels_survive(self):
+        """Scattered invalid pixels must not collapse the valid population."""
+        rng = np.random.default_rng(7)
+        power = rng.uniform(0.01, 1.0, size=(60, 60)).astype(np.float32)
+        power[rng.random((60, 60)) < 0.05] = np.nan  # ~5% gaps, as in speckle masks
+
+        smoothed = smooth_linear(power, kernel_size=3)
+
+        finite_fraction = np.isfinite(smoothed).mean()
+        assert finite_fraction > 0.95
+
     def test_smooth_linear_even_kernel(self):
         """Test that even kernel size raises error."""
         power = np.ones((10, 10), dtype=np.float32)

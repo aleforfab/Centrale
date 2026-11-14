@@ -1,10 +1,8 @@
 name: CI
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+# Test every branch, not just main. A contributor's branch must fail loudly
+# before it reaches a pull request, and pull requests get a check of their own.
+on: [push, pull_request]
 
 jobs:
   backend:
@@ -55,7 +53,14 @@ jobs:
           cd dancing-with-the-sars-frontend
           npm run typecheck
         env:
-          NEXT_PUBLIC_API_URL: "http://localhost:8000"
+          BACKEND_URL: "http://127.0.0.1:8000"
+          NEXT_PUBLIC_MAPBOX_TOKEN: "dummy_token"
+
+      - name: Frontend tests
+        run: |
+          cd dancing-with-the-sars-frontend
+          npm test
+        env:
           NEXT_PUBLIC_MAPBOX_TOKEN: "dummy_token"
       
       - name: Build
@@ -63,5 +68,5 @@ jobs:
           cd dancing-with-the-sars-frontend
           npm run build
         env:
-          NEXT_PUBLIC_API_URL: "http://localhost:8000"
+          BACKEND_URL: "http://127.0.0.1:8000"
           NEXT_PUBLIC_MAPBOX_TOKEN: "dummy_token"

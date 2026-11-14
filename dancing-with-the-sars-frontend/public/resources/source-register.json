@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "record_status": "metadata-partial",
+  "record_note": "Filenames were recorded from the documents supplied by the team. The PDFs are not redistributed in this repository, so SHA-256 fingerprints, page counts and publication years are null here rather than guessed. Run `python -m scripts.build_source_register --pdf-dir <folder>` from the backend once the PDFs are available locally to fill them in. A null field means unverified, not zero and not unknown-by-accident.",
+  "bibliography_scope": "This register lists the documents consulted for the applications library. It is not an exhaustive bibliography of every citation inside those papers, and no dataset mentioned by a paper has been integrated merely because it was mentioned.",
+  "collection": {
+    "title": "NISAR applications and white-paper collection",
+    "publisher": "NISAR (NASA/ISRO mission team)",
+    "url": "https://nisar.jpl.nasa.gov/",
+    "description": "General entry point for NISAR mission and applications material.",
+    "verified_as_direct_pdf_links": false,
+    "url_note": "This is the mission website, not a verified per-document URL. No direct link to an individual PDF is asserted."
+  },
+  "data_services": [
+    {
+      "name": "ASF DAAC Search",
+      "url": "https://search.asf.alaska.edu/",
+      "purpose": "Discovery and download of NISAR and other SAR products.",
+      "verified_in_this_repository": false
+    },
+    {
+      "name": "ASF DAAC documentation",
+      "url": "https://asf.alaska.edu/",
+      "purpose": "Product guides, access instructions and mission documentation.",
+      "verified_in_this_repository": false
+    },
+    {
+      "name": "NASA Earthdata login",
+      "url": "https://urs.earthdata.nasa.gov/",
+      "purpose": "Account used to authenticate data downloads. Credentials are never stored in this repository.",
+      "verified_in_this_repository": false
+    }
+  ],
+  "papers": [
+    {
+      "id": "flooding",
+      "filename": "nisarflooding.pdf",
+      "topic": "Flooding",
+      "sha256": null,
+      "page_count": null,
+      "publication_year": null,
+      "verification": "filename only"
+    },
+    {
+      "id": "water-and-soil-moisture",
+      "filename": "NISARwater.pdf",
+      "topic": "Surface water and soil moisture",
+      "sha256": null,
+      "page_count": null,
+      "publication_year": null,
+      "verification": "filename only"
+    },
+    {
+      "id": "coastal",
+      "filename": "NisarCostalRegion.pdf",
+      "topic": "Coastal regions",
+      "sha256": null,
+      "page_count": null,
+      "publication_year": null,
+      "verification": "filename only"
+    },
+    {
+      "id": "glaciers-and-snow",
+      "filename": "NisarAPPGLacier.pdf",
+      "topic": "Mountain glaciers and snow",
+      "sha256": null,
+      "page_count": null,
+      "publication_year": null,
+      "verification": "filename only"
+    },
+    {
+      "id": "landslides",
+      "filename": "nisarLandslide.pdf",
+      "topic": "Landslides",
+      "sha256": null,
+      "page_count": null,
+      "publication_year": null,
+      "verification": "filename only"
+    },
+    {
+      "id": "volcanoes",
+      "filename": "nisarmonitoringVolcan.pdf",
+      "topic": "Volcanoes",
+      "sha256": null,
+      "page_count": null,
+      "publication_year": null,
+      "verification": "filename only"
+    },
+    {
+      "id": "sinkholes",
+      "filename": "nisarsinkhole.pdf",
+      "topic": "Sinkholes",
+      "sha256": null,
+      "page_count": null,
+      "publication_year": null,
+      "verification": "filename only"
+    },
+    {
+      "id": "permafrost",
+      "filename": "nisarterrestialperma.pdf",
+      "topic": "Terrestrial permafrost",
+      "sha256": null,
+      "page_count": null,
+      "publication_year": null,
+      "verification": "filename only"
+    },
+    {
+      "id": "earthquakes-and-tectonics",
+      "filename": "nisarEarth.pdf",
+      "topic": "Plate tectonics and earthquakes",
+      "sha256": null,
+      "page_count": null,
+      "publication_year": null,
+      "verification": "filename only"
+    },
+    {
+      "id": "human-induced-earthquakes",
+      "filename": "nisarinductedearthquake.pdf",
+      "topic": "Human-induced earthquakes",
+      "sha256": null,
+      "page_count": null,
+      "publication_year": null,
+      "verification": "filename only"
+    },
+    {
+      "id": "texas-hazards",
+      "filename": "nisarManmadeHasardTexas.pdf",
+      "topic": "Natural and manmade hazards in Texas",
+      "sha256": null,
+      "page_count": null,
+      "publication_year": null,
+      "verification": "filename only"
+    },
+    {
+      "id": "disaster-damage",
+      "filename": "nisarDisaster.pdf",
+      "topic": "Disaster damage assessment",
+      "sha256": null,
+      "page_count": null,
+      "publication_year": null,
+      "verification": "filename only"
+    }
+  ],
+  "duplicates": [
+    {
+      "files": ["nisarterrestialperma.pdf", "nisarpermafrost.pdf"],
+      "relation": "reported byte-identical by a previous working session",
+      "verified_in_this_repository": false,
+      "note": "Neither file is stored in this repository, so the hash comparison cannot be repeated here. Re-run the register builder to confirm."
+    }
+  ]
+}
