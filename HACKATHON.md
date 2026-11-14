@@ -49,7 +49,9 @@ not approved yet. Browser tests: local servers + (on VM) real browser.
 - Phase 0/1 (brief, scope): done — five product questions answered (see handoff).
 - Phase 2 (skeleton runs): done — app installed-product path verified 2026-11-14;
   not deployed.
-- Phase 3 (core build): slices in progress — see `agent-team/PLAN.md`.
+- Phase 3 (core build): slices merged 2026-11-14 — worker 01 gamma→sigma (#9),
+  worker 03 InSAR proposed package (#10), worker 02 Worldview Time Machine (#8).
+  Mapbox tile-placeholder fix open as PR #11. See `agent-team/PLAN.md`.
 - Phase 4/5: not started. Gate 2 and Gate 3 NOT approved.
 
 ## Human gates

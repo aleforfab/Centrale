@@ -77,6 +77,16 @@ after freeze except reverts of visibly broken things.
   Gate 1 recorded approved; Gate 2 (VM go-live) NOT approved.
 - Next: commit + push `agent-team/`, print launch cards, await human to open the
   three worker sessions; then integrate.
+- 2026-11-14 (evening): user merged the worker PRs into `main` —
+  #9 → `3262d14` (normalizer), #10 → `fcf417a` (InSAR proposed package),
+  #8 → `ee64f86` (Worldview Time Machine). Supervisor verified CI green on all
+  three post-merge runs implicitly via the PRs. PR #11 (Mapbox tile-placeholder
+  fix) was rebased onto merged `main` (conflict in `Map.tsx` vs PR #8's hunk —
+  resolved to the `resolveTileUrl()` verbatim-placeholder approach), re-verified
+  (75 tests, typecheck, build) and is CLEAN with backend+frontend CI green;
+  merge still pending user go. Supervisor branch rebased onto `ee64f86`.
+  Real Anak Krakatau build STILL NOT RUN; VM verification pending; Gate 2 not
+  approved. Deployed VM is behind `main` (was `d89fc8d`) — rebuild after #11 merge.
 - 2026-11-14 (later, supervisor): workers 01 and 02 handed in as DRAFT PRs —
   PR #9 `arena/29b33504-centrale` (+1323/-48, 9 files, backend-only + ANNOUNCE
   models.py; CI green; convention σ⁰=γ⁰×rtcGammaToSigmaFactor **confirmed against
