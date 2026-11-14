@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { AppShell } from "@/components/AppShell";
 import { ComparisonViewer } from "@/components/ComparisonViewer";
-import { SiteNav } from "@/components/SiteNav";
 import { api } from "@/lib/api";
 import { observationPolarizations, usablePairs } from "@/lib/comparison";
 import type { SiteManifest, SiteSummary } from "@/lib/types";
@@ -71,18 +71,13 @@ export default function ComparePage() {
   const pols = useMemo(() => (manifest ? observationPolarizations(manifest) : []), [manifest]);
 
   return (
-    <main className="min-h-screen bg-[#0b1118] p-4 text-slate-100 sm:p-6 lg:p-8">
-      <header className="mb-3 flex flex-col gap-3 border-b border-slate-700/70 pb-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-slate-500">Earth observation workspace</p>
-          <h1 className="text-2xl font-semibold tracking-tight">Before / after comparison</h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Two installed observations of the same stack, revealed with a slider
-          </p>
-        </div>
-      </header>
-
-      <SiteNav current="/compare" />
+    <AppShell
+      current="/compare"
+      eyebrow="Exact-pair viewer"
+      title="Before / after comparison"
+      subtitle="Two installed observations of the same stack, revealed with a slider and locked cameras."
+      status={<span>Exact dates · one polarization · no substitutes</span>}
+    >
 
       {error && (
         <div
@@ -179,6 +174,6 @@ export default function ComparePage() {
           ) : null}
         </>
       )}
-    </main>
+    </AppShell>
   );
 }

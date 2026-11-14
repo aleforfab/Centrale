@@ -14,6 +14,20 @@ import {
 import type { SiteManifest } from "@/lib/types";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+mapboxgl.accessToken = MAPBOX_TOKEN || "pk.prototype-no-token";
+const HAS_MAPBOX_TOKEN = /^pk\.[A-Za-z0-9._-]{20,}$/.test(MAPBOX_TOKEN);
+
+const FALLBACK_STYLE = {
+  version: 8,
+  sources: {},
+  layers: [
+    {
+      id: "dark-background",
+      type: "background",
+      paint: { "background-color": "#071018" },
+    },
+  ],
+} as unknown as mapboxgl.Style;
 
 export interface ComparisonViewerProps {
   manifest: SiteManifest;
@@ -54,12 +68,12 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
   // Create both maps once. Interaction stays enabled, but every camera change on
   // one map is mirrored to the other, so the two dates always show the same view.
   useEffect(() => {
-    if (!MAPBOX_TOKEN || !beforeContainer.current || !afterContainer.current) return;
+    if (!beforeContainer.current || !afterContainer.current) return;
     if (beforeMap.current || afterMap.current) return;
 
     const bbox = manifest.site.bbox;
     const options: Omit<mapboxgl.MapOptions, "container"> = {
-      style: "mapbox://styles/mapbox/dark-v11",
+      style: HAS_MAPBOX_TOKEN ? "mapbox://styles/mapbox/dark-v11" : FALLBACK_STYLE,
       attributionControl: false,
     };
     let first: mapboxgl.Map;
@@ -195,48 +209,51 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
           }}
           onPointerCancel={() => setDragging(false)}
         >
-          {MAPBOX_TOKEN ? (
-            <>
-              <div className="absolute inset-0">
-                <div ref={beforeContainer} className="h-full w-full" data-testid="map-before" />
-              </div>
-              <div
-                className="absolute inset-0"
-                style={{ clipPath: `inset(0 0 0 ${clamped}%)` }}
-                data-testid="map-after-clip"
-              >
-                <div ref={afterContainer} className="h-full w-full" data-testid="map-after" />
-              </div>
-              <div
-                className="pointer-events-none absolute left-3 top-3 rounded border border-slate-600 bg-slate-950/80 px-2 py-1 text-[11px] text-slate-200"
-                aria-hidden="true"
-              >
-                <span className="font-semibold uppercase tracking-wide">Before</span> · {active.before.date}
-              </div>
-              <div
-                className="pointer-events-none absolute right-3 top-3 rounded border border-slate-600 bg-slate-950/80 px-2 py-1 text-[11px] text-slate-200"
-                aria-hidden="true"
-              >
-                <span className="font-semibold uppercase tracking-wide">After</span> · {active.after.date}
-              </div>
-              <div
-                className="pointer-events-none absolute inset-y-0 w-px bg-white/70"
-                style={{ left: `${clamped}%` }}
-                aria-hidden="true"
-              />
-            </>
-          ) : (
-            <div className="grid h-full place-items-center p-8 text-center">
-              <div>
-                <h2 className="text-base font-semibold text-slate-200">Map imagery cannot be displayed</h2>
-                <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">
-                  No <code className="rounded bg-slate-800 px-1">NEXT_PUBLIC_MAPBOX_TOKEN</code> is configured for
-                  this build. The selected dates and provenance are still shown; only the basemap and raster
-                  tiles are unavailable.
-                </p>
-              </div>
+          <>
+            <div className="absolute inset-0">
+              <div ref={beforeContainer} className="h-full w-full" data-testid="map-before" />
             </div>
-          )}
+            <div
+              className="absolute inset-0"
+              style={{ clipPath: `inset(0 0 0 ${clamped}%)` }}
+              data-testid="map-after-clip"
+            >
+              <div ref={afterContainer} className="h-full w-full" data-testid="map-after" />
+            </div>
+            {!HAS_MAPBOX_TOKEN && (
+              <div
+                className="pointer-events-none absolute inset-0 opacity-50"
+                aria-hidden="true"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(rgba(125,216,236,0.14) 1px, transparent 1px), linear-gradient(90deg, rgba(125,216,236,0.14) 1px, transparent 1px)",
+                  backgroundSize: "48px 48px",
+                }}
+              />
+            )}
+            <div
+              className="pointer-events-none absolute left-3 top-3 rounded border border-slate-600 bg-slate-950/80 px-2 py-1 text-[11px] text-slate-200"
+              aria-hidden="true"
+            >
+              <span className="font-semibold uppercase tracking-wide">Before</span> · {active.before.date}
+            </div>
+            <div
+              className="pointer-events-none absolute right-3 top-3 rounded border border-slate-600 bg-slate-950/80 px-2 py-1 text-[11px] text-slate-200"
+              aria-hidden="true"
+            >
+              <span className="font-semibold uppercase tracking-wide">After</span> · {active.after.date}
+            </div>
+            {!HAS_MAPBOX_TOKEN && (
+              <div className="pointer-events-none absolute bottom-3 right-3 rounded border border-amber-700/50 bg-slate-950/85 px-2 py-1 text-[10px] text-amber-100">
+                Local canvas · exact product tiles retained · no Mapbox basemap
+              </div>
+            )}
+            <div
+              className="pointer-events-none absolute inset-y-0 w-px bg-white/70"
+              style={{ left: `${clamped}%` }}
+              aria-hidden="true"
+            />
+          </>
           <span className="sr-only" id="before-label">
             Before imagery from {active.before.date}
           </span>
