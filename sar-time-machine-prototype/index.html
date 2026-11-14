@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SAR Time Machine — standalone prototype</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="5" fill="currentColor"/><ellipse cx="16" cy="16" rx="13" ry="6" fill="none" stroke="currentColor" stroke-width="1.6" transform="rotate(-24 16 16)"/><circle cx="27" cy="10" r="2.2" fill="#ff7a3d"/></svg>
+      </span>
+      <div><strong>SAR Time Machine</strong><span>Standalone prototype · not connected to the main project</span></div>
+    </div>
+    <div class="topbar-right">
+      <span class="place">Anak Krakatau · Indonesia</span>
+      <span class="pill pill-warn">Synthetic demo</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="map-panel" aria-label="Radar evolution map">
+      <div class="map-toolbar">
+        <div class="mode-switch" role="group" aria-label="Map interaction mode">
+          <button id="mode-evolution" type="button" aria-pressed="true">Evolution</button>
+          <button id="mode-compare" type="button" aria-pressed="false">Swipe compare</button>
+        </div>
+        <div class="map-meta"><span id="layer-label">HH backscatter · dB</span><span id="frame-counter">— / —</span></div>
+      </div>
+
+      <div id="map-viewport" class="map-viewport">
+        <div id="map-stage" class="map-stage">
+          <img id="frame-a" class="map-frame visible" alt="Synthetic radar backscatter, current date" draggable="false" />
+          <img id="frame-b" class="map-frame" alt="" draggable="false" />
+        </div>
+        <div id="baseline-clip" class="baseline-clip" hidden><div id="baseline-stage" class="map-stage"><img id="baseline-frame" class="map-frame visible" alt="Synthetic radar backscatter, baseline date" draggable="false" /></div></div>
+        <div class="graticule" aria-hidden="true"></div>
+        <div id="compare-divider" class="compare-divider" hidden>
+          <div id="swipe-handle" class="swipe-handle" role="slider" tabindex="0" aria-label="Before and after swipe position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="35" aria-orientation="horizontal">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 7l-4 5 4 5M15 7l4 5-4 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <span id="baseline-tag" class="map-tag tag-left" hidden>Before</span>
+        <span id="current-tag" class="map-tag tag-right">—</span>
+        <div class="north" aria-hidden="true">N<span></span></div>
+        <div class="zoom-controls" role="group" aria-label="Map zoom">
+          <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
+          <button id="zoom-out" type="button" aria-label="Zoom out">−</button>
+          <button id="zoom-reset" type="button" aria-label="Reset map view" class="zoom-reset">1:1</button>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span>Weak</span><i></i><span>Strong return</span>
+        </div>
+        <div class="map-footer-overlay">
+          <span id="scale-bar" class="scale-bar"><i></i><span>— km</span></span>
+          <span id="coords" class="coords">—</span>
+        </div>
+        <div id="loading" class="map-message" role="status">
+          <div class="loading-box">
+            <p id="loading-text">Loading synthetic frames…</p>
+            <div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+            <p id="loading-count" class="loading-count">0 / 0</p>
+          </div>
+        </div>
+        <div id="error" class="map-message error" role="alert" hidden>
+          <div class="error-box">
+            <p id="error-text"></p>
+            <button id="retry" type="button" class="retry-btn">Retry</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline-panel">
+        <div class="transport">
+          <button id="prev" type="button" class="icon-btn" aria-label="Previous observation"><svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M5 4v12M15 4l-8 6 8 6z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+          <button id="play" type="button" class="play-btn" aria-label="Play evolution" disabled><span id="play-icon" aria-hidden="true"></span><span id="play-text">Play</span></button>
+          <button id="next" type="button" class="icon-btn" aria-label="Next observation"><svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M15 4v12M5 4l8 6-8 6z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+          <div class="current-date">
+            <span>Observation</span>
+            <strong id="current-date" aria-live="polite">—</strong>
+            <em id="gap-label" class="gap-label">—</em>
+          </div>
+          <label class="speed">Speed<select id="speed" aria-label="Playback speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label>
+          <label class="loop"><input id="loop" type="checkbox" checked /> Loop</label>
+        </div>
+        <input id="timeline" class="timeline" type="range" min="0" max="4" step="1" value="0" aria-label="Observation date" disabled />
+        <div id="ticks" class="ticks" role="group" aria-label="Observation dates"></div>
+        <p class="hint">Scrub the timeline or press Play. Arrow keys step through observations; Space toggles playback. In compare mode, drag the divider or focus it and use arrow keys. Scroll to zoom, drag to pan.</p>
+      </div>
+    </section>
+
+    <aside class="sidebar">
+      <section class="card notice-card">
+        <h2>Demo data, honestly labeled</h2>
+        <p id="series-notice">These frames are procedurally generated to demonstrate the interaction. They are <strong>not NISAR observations</strong> and do not reconstruct the real eruption.</p>
+      </section>
+      <section class="card">
+        <h2>Observation</h2>
+        <dl class="facts">
+          <div><dt>Date</dt><dd id="fact-date">—</dd></div>
+          <div><dt>Frame</dt><dd id="fact-frame">—</dd></div>
+          <div><dt>Polarization</dt><dd id="fact-pol">HH</dd></div>
+          <div><dt>Display range</dt><dd id="fact-range">—</dd></div>
+          <div><dt>Since previous</dt><dd id="fact-gap">—</dd></div>
+          <div><dt>Source</dt><dd>Synthetic fixture</dd></div>
+        </dl>
+      </section>
+      <section class="card" id="compare-card" hidden>
+        <h2>Compare</h2>
+        <label class="baseline-label">Baseline date<select id="baseline-select" aria-label="Baseline date"></select></label>
+        <p class="muted">Left of the divider is the baseline; right is the current observation. Both frames stay fixed to the same extent.</p>
+      </section>
+      <section class="card">
+        <h2>How it works</h2>
+        <ol class="how">
+          <li><strong>Backend</strong> publishes an ordered list of dated, coregistered layers.</li>
+          <li><strong>Frontend</strong> preloads frames, then crossfades between dated frames—no invented intermediate data.</li>
+          <li><strong>Swipe</strong> clips one fixed frame over another; it does not warp the imagery.</li>
+        </ol>
+      </section>
+      <details class="card reference">
+        <summary>About the synthetic frames</summary>
+        <p>The island grows radially and a bright flow extends south-east. Speckle is deterministic per frame. Gaps between dates are irregular (4–21 days) to mirror a real 12-day stack with missed passes.</p>
+        <p>To regenerate the PNGs on disk: <code>python synthetic.py --output frames/</code></p>
+      </details>
+    </aside>
+  </main>
+  <footer class="page-footer">Separate local prototype · stdlib server + browser player · main project unchanged</footer>
+  <script src="/app.js" defer></script>
+</body>
+</html>
