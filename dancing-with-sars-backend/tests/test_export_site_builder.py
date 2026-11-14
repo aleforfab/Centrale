@@ -220,3 +220,26 @@ def test_remote_dry_run_never_downloads_granules(tmp_path, monkeypatch):
     result = build_site(config_file, dry_run=True)
 
     assert result["granules"] == names
+
+
+def test_colourize_keeps_nan_transparent_without_invalid_cast():
+    """NaN pixels become fully transparent with a defined RGB value.
+
+    Regression test: NaN used to reach the uint8 cast, which is undefined
+    behaviour and emitted 'invalid value encountered in cast' at build time.
+    """
+    import warnings
+
+    import numpy as np
+
+    from nisar.export import _colourize
+
+    values = np.array([[1.0, np.nan], [-2.0, 0.0]], dtype=np.float32)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        rgba = _colourize(values, "difference", minimum=-3, maximum=3)
+
+    assert rgba.dtype == np.uint8
+    assert rgba[..., 3][0, 1] == 0, "NaN pixel must be transparent"
+    assert tuple(rgba[..., :3][0, 1]) == (0, 0, 0), "NaN pixel must not keep a stale colour"
+    assert rgba[..., 3][0, 0] == 255

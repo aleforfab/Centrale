@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { DanceChart } from "@/components/DanceChart";
 import { Map, type MapView } from "@/components/Map";
+import { SiteNav } from "@/components/SiteNav";
 import { api } from "@/lib/api";
 import type {
   DataStatus,
@@ -177,6 +178,8 @@ export default function Home() {
             : "Checking data availability…"}
         </div>
       </header>
+
+      <SiteNav current="/" />
 
       {error && (
         <div className="mb-5 flex items-start justify-between gap-4 rounded-md border border-red-700/60 bg-red-950/80 p-4 text-sm text-red-200" role="alert">

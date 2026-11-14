@@ -73,12 +73,13 @@ sudo mkdir -p /srv/dancing-sars/{granules,products,cache}
 sudo chown -R "$(whoami)":"$(whoami)" /srv/dancing-sars
 ```
 
-Then generate the synthetic input and build it (the generator name is confirmed
-only after migration; do not guess it):
+Then generate the synthetic input and build it. The generator exists in this
+repository and was exercised in the sandbox; it has not been run on the VM yet.
 
 ```bash
 cd ~/centrale/dancing-with-sars-backend
 python -m scripts.make_demo_site --output /srv/dancing-sars/demo-input
+# Re-running needs --force, or delete /srv/dancing-sars/demo-input first.
 
 PRODUCTS_DIR=/srv/dancing-sars/products CACHE_DIR=/srv/dancing-sars/cache \
 python -m nisar.cli build-site \
@@ -96,8 +97,9 @@ This is a software rehearsal, not evidence of a real change.
 ```bash
 cd ~/centrale/dancing-with-the-sars-frontend
 npm ci
+cp .env.example .env.local   # then edit in your editor; do not paste secrets in chat
 npm run typecheck
-npm test          # only if the migrated tree includes the test runner
+npm test
 npm run build
 ```
 
@@ -147,7 +149,7 @@ Confirm in the console:
 | Step | Status |
 | --- | --- |
 | 1 Clone | not started |
-| 2 Python environment | not started |
+| 2 Python environment | not started. Python 3.13 wheel availability is still unverified; the sandbox used 3.11 |
 | 3 Backend tests on VM | not started |
 | 4 Synthetic rehearsal on VM | not started |
 | 5 Frontend build on VM | not started |

@@ -133,7 +133,11 @@ def _colourize(
         grey = scaled * 255
         colour = np.stack([grey, grey, grey], axis=-1)
 
-    rgba[..., :3] = np.clip(colour, 0, 255).astype(np.uint8)
+    # Invalid pixels keep alpha 0, but NaN must not reach the uint8 cast: the
+    # result of that cast is undefined and numpy warns about it.
+    rgba[..., :3] = np.clip(np.nan_to_num(colour, nan=0.0, posinf=255.0, neginf=0.0), 0, 255).astype(
+        np.uint8
+    )
     rgba[..., 3] = np.where(valid, 255, 0).astype(np.uint8)
     return rgba
 
