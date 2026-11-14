@@ -35,8 +35,10 @@ Supporting material:
 GCOV granules → processing → products on disk → FastAPI serves them → browser explores
 ```
 
-Expensive processing happens ahead of time via the CLI. There is no public
-endpoint that lets a visitor trigger processing or downloads.
+Expensive processing normally happens ahead of time via the CLI. The dashboard
+does not let a visitor trigger processing; a guarded operator API route for
+cache-miss builds is described in [Runtime live fetch](#runtime-live-fetch-operator-api)
+below.
 
 ```text
 browser ──► Next.js (same origin /api, /products) ──► FastAPI (loopback) ──► products/
@@ -62,7 +64,9 @@ Windows PowerShell equivalents are unchanged from earlier versions of this file:
 
 Earth Engine is only needed for the legacy Sentinel-1 routes, which stay disabled
 unless `ENABLE_SENTINEL1_FALLBACK=true`. ASF catalogue searches may work without
-Earth Engine credentials.
+Earth Engine credentials. Live ASF NISAR searches and full-granule downloads use
+Earthdata credentials instead (`EARTHDATA_TOKEN`, or
+`EARTHDATA_USERNAME`/`EARTHDATA_PASSWORD`), as documented in `.env.example`.
 
 ## Frontend setup
 
@@ -153,3 +157,18 @@ Two documents, two owners:
 
 Nothing in either document has been executed on the VM yet; every step is marked
 as unstarted.
+
+## Runtime live fetch (operator API)
+
+The precomputed dashboard path above is unchanged. `POST /api/nisar/fetch` adds
+a cache-aside path for operators: catalog searches are TTL-cached, a miss is
+queued as a background job, and progress is polled at
+`/api/nisar/fetch/jobs/{job_id}`. Live fetch is **enabled by default**
+(`ENABLE_LIVE_FETCH=false` opts out), but every live build still requires
+Earthdata credentials and respects `LIVE_FETCH_MAX_BYTES`. The dashboard does
+not expose a visitor-facing button for this route. See
+[`dancing-with-sars-backend/docs/LIVE_FETCH.md`](dancing-with-sars-backend/docs/LIVE_FETCH.md).
+
+For an evaluation of Canada's EODMS / SAR Toolbox / RCM CEOS-ARD instead of, or
+alongside, ASF NISAR data, see
+[`dancing-with-sars-backend/docs/EODMS_SAR_DATA_SOURCE.md`](dancing-with-sars-backend/docs/EODMS_SAR_DATA_SOURCE.md).

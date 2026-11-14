@@ -116,6 +116,7 @@ def health_check():
         ),
         "nisar_ready": nisar_ready,
         "sites_count": sites_count,
+        "live_fetch_enabled": Config.ENABLE_LIVE_FETCH,
     }
 
 
@@ -130,6 +131,7 @@ def data_status():
         ),
         "nisar_ready": nisar_ready,
         "sites_count": sites_count,
+        "live_fetch_enabled": Config.ENABLE_LIVE_FETCH,
         "message": "Precomputed NISAR products are available." if nisar_ready else (
             "No built NISAR site products are installed."
             + (" Sentinel-1 fallback is enabled." if fallback_enabled else "")
