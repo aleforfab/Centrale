@@ -6,9 +6,10 @@ both from local files and remote URLs.
 
 import hashlib
 import logging
-import pickle
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import h5py
 import numpy as np
@@ -45,11 +46,35 @@ class Window:
     granule: str  # Granule name
     pol: str  # Polarization code (e.g., "HH", "HV")
     mask: np.ndarray | None = None  # Optional mask layer from file
+    rtc_gamma_to_sigma: np.ndarray | float | None = None  # Gamma0-to-sigma0 factor
     
     def __post_init__(self):
-        """Ensure power is float32."""
+        """Ensure power is float32 and validate rtc_gamma_to_sigma."""
         if self.power.dtype != np.float32:
             self.power = self.power.astype(np.float32)
+        if self.rtc_gamma_to_sigma is not None:
+            if isinstance(self.rtc_gamma_to_sigma, np.ndarray):
+                if self.rtc_gamma_to_sigma.ndim == 0:
+                    self.rtc_gamma_to_sigma = float(self.rtc_gamma_to_sigma.item())
+                elif self.rtc_gamma_to_sigma.ndim == 2:
+                    if self.rtc_gamma_to_sigma.shape != self.power.shape:
+                        raise ValueError(
+                            f"rtc_gamma_to_sigma shape {self.rtc_gamma_to_sigma.shape} "
+                            f"does not match power shape {self.power.shape}"
+                        )
+                    if self.rtc_gamma_to_sigma.dtype != np.float32:
+                        self.rtc_gamma_to_sigma = self.rtc_gamma_to_sigma.astype(np.float32)
+                else:
+                    raise ValueError(
+                        f"rtc_gamma_to_sigma array must be 0D or 2D, got {self.rtc_gamma_to_sigma.ndim}D"
+                    )
+            elif isinstance(self.rtc_gamma_to_sigma, (int, float, np.floating, np.integer)):
+                self.rtc_gamma_to_sigma = float(self.rtc_gamma_to_sigma)
+            else:
+                raise TypeError(
+                    f"rtc_gamma_to_sigma must be np.ndarray, float, or None, "
+                    f"got {type(self.rtc_gamma_to_sigma).__name__}"
+                )
 
 
 class GcovReader:
@@ -188,6 +213,125 @@ class GcovReader:
             mask_window = mask_data[row_slice, col_slice]
             return mask_window
         return None
+
+    def _read_gamma_to_sigma_window(
+        self,
+        group,
+        row_slice: slice,
+        col_slice: slice,
+        *,
+        expected_full_shape: tuple[int, ...],
+        granule_name: str,
+    ) -> np.ndarray | float | None:
+        """Read ``rtcGammaToSigmaFactor`` as a scalar float, 2D float32 grid, or None."""
+        if "rtcGammaToSigmaFactor" not in group:
+            logger.warning(
+                "Dataset rtcGammaToSigmaFactor missing in %s; gamma-to-sigma normalization skipped",
+                granule_name,
+            )
+            return None
+
+        ds = group["rtcGammaToSigmaFactor"]
+        if ds.ndim == 0:
+            return float(ds[()])
+        if ds.ndim == 1 and ds.size == 1:
+            return float(ds[0])
+        if ds.ndim == 2:
+            if ds.shape != expected_full_shape:
+                raise InvalidFileError(
+                    f"rtcGammaToSigmaFactor shape {ds.shape} does not match "
+                    f"covariance grid shape {expected_full_shape}"
+                )
+            arr = ds[row_slice, col_slice]
+            if arr.dtype != np.float32:
+                arr = arr.astype(np.float32)
+            return arr
+        raise InvalidFileError(
+            f"Unsupported rtcGammaToSigmaFactor shape {ds.shape} in {granule_name}"
+        )
+
+    def _load_window_cache(self, cache_path: Path) -> Window | None:
+        """Load a cached Window from an .npz archive, or None on miss/legacy format."""
+        try:
+            with np.load(cache_path, allow_pickle=False) as data:
+                if "cache_version" not in data or int(data["cache_version"]) != 2:
+                    return None
+                t = data["transform"]
+                transform = Affine(
+                    float(t[0]), float(t[1]), float(t[2]),
+                    float(t[3]), float(t[4]), float(t[5]),
+                )
+                mask = data["mask"] if bool(data["has_mask"]) else None
+                kind = str(data["rtc_gamma_to_sigma_kind"].item())
+                if kind == "none":
+                    rtc_gamma_to_sigma: np.ndarray | float | None = None
+                elif kind == "scalar":
+                    rtc_gamma_to_sigma = float(data["rtc_gamma_to_sigma"].item())
+                elif kind == "grid":
+                    rtc_gamma_to_sigma = data["rtc_gamma_to_sigma"].astype(np.float32, copy=False)
+                else:
+                    return None
+                return Window(
+                    power=data["power"],
+                    valid=data["valid"],
+                    transform=transform,
+                    crs=str(data["crs"].item()),
+                    spacing_m=float(data["spacing_m"].item()),
+                    granule=str(data["granule"].item()),
+                    pol=str(data["pol"].item()),
+                    mask=mask,
+                    rtc_gamma_to_sigma=rtc_gamma_to_sigma,
+                )
+        except (OSError, ValueError, KeyError, TypeError, zipfile.BadZipFile):
+            logger.debug("Ignoring unreadable or legacy cache entry at %s", cache_path)
+            return None
+
+    def _save_window_cache(self, cache_path: Path, window: Window) -> None:
+        """Save a Window (including rtc_gamma_to_sigma) atomically to .npz."""
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        payload: dict[str, Any] = {
+            "cache_version": np.array(2, dtype=np.int32),
+            "power": window.power.astype(np.float32, copy=False),
+            "valid": window.valid.astype(bool, copy=False),
+            "transform": np.array(
+                [
+                    window.transform.a,
+                    window.transform.b,
+                    window.transform.c,
+                    window.transform.d,
+                    window.transform.e,
+                    window.transform.f,
+                ],
+                dtype=np.float64,
+            ),
+            "crs": np.array(window.crs),
+            "spacing_m": np.array(window.spacing_m, dtype=np.float64),
+            "granule": np.array(window.granule),
+            "pol": np.array(window.pol),
+            "has_mask": np.array(window.mask is not None, dtype=bool),
+        }
+        if window.mask is not None:
+            payload["mask"] = window.mask
+        if window.rtc_gamma_to_sigma is None:
+            payload["rtc_gamma_to_sigma_kind"] = np.array("none")
+        elif isinstance(window.rtc_gamma_to_sigma, np.ndarray):
+            payload["rtc_gamma_to_sigma_kind"] = np.array("grid")
+            payload["rtc_gamma_to_sigma"] = window.rtc_gamma_to_sigma.astype(
+                np.float32, copy=False
+            )
+        else:
+            payload["rtc_gamma_to_sigma_kind"] = np.array("scalar")
+            payload["rtc_gamma_to_sigma"] = np.array(
+                float(window.rtc_gamma_to_sigma), dtype=np.float64
+            )
+
+        tmp_path = cache_path.with_suffix(".tmp.npz")
+        try:
+            with open(tmp_path, "wb") as f:
+                np.savez_compressed(f, **payload)
+            tmp_path.replace(cache_path)
+        finally:
+            tmp_path.unlink(missing_ok=True)
     
     def read_window(
         self,
@@ -225,11 +369,10 @@ class GcovReader:
             granule_name = path.name
             cache_path = self._get_cache_path(granule_name, bbox_hash, pol)
             if cache_path.exists():
-                logger.debug(f"Cache hit for {granule_name} bbox={bbox_hash} pol={pol}")
-                with open(cache_path, "rb") as f:
-                    cached = pickle.load(f)
-                    if isinstance(cached, Window):
-                        return cached
+                cached = self._load_window_cache(cache_path)
+                if cached is not None:
+                    logger.debug(f"Cache hit for {granule_name} bbox={bbox_hash} pol={pol}")
+                    return cached
         
         # Parse granule name to extract info
         try:
@@ -368,18 +511,29 @@ class GcovReader:
                         group, pol_dataset_name, row_slice, col_slice
                     )
                     
-                    # Read mask
+                    # Read mask and radiometric gamma-to-sigma factor
                     mask = self._read_mask_window(group, row_slice, col_slice)
+                    rtc_gamma_to_sigma = self._read_gamma_to_sigma_window(
+                        group,
+                        row_slice,
+                        col_slice,
+                        expected_full_shape=group[pol_dataset_name].shape,
+                        granule_name=path.name,
+                    )
                     if x_coords[0] > x_coords[-1]:
                         power = power[:, ::-1]
                         valid = valid[:, ::-1]
                         if mask is not None:
                             mask = mask[:, ::-1]
+                        if isinstance(rtc_gamma_to_sigma, np.ndarray):
+                            rtc_gamma_to_sigma = rtc_gamma_to_sigma[:, ::-1]
                     if y_coords[0] < y_coords[-1]:
                         power = power[::-1, :]
                         valid = valid[::-1, :]
                         if mask is not None:
                             mask = mask[::-1, :]
+                        if isinstance(rtc_gamma_to_sigma, np.ndarray):
+                            rtc_gamma_to_sigma = rtc_gamma_to_sigma[::-1, :]
 
                     left = x_coords[col_end - 1] if x_coords[0] > x_coords[-1] else x_coords[col_start]
                     top = y_coords[row_end - 1] if y_coords[0] < y_coords[-1] else y_coords[row_start]
@@ -398,14 +552,13 @@ class GcovReader:
                         granule=parsed.granule_name if hasattr(parsed, 'granule_name') else path.name,
                         pol=pol.upper(),
                         mask=mask,
+                        rtc_gamma_to_sigma=rtc_gamma_to_sigma,
                     )
                     
                     # Cache the window
                     if use_cache:
                         cache_path = self._get_cache_path(path.name, bbox_hash, pol)
-                        cache_path.parent.mkdir(parents=True, exist_ok=True)
-                        with open(cache_path, "wb") as f:
-                            pickle.dump(window, f)
+                        self._save_window_cache(cache_path, window)
                         logger.debug(f"Cached window to {cache_path}")
                     
                     return window

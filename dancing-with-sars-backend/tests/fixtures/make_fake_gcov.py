@@ -15,6 +15,17 @@ import h5py
 import numpy as np
 
 
+def make_varying_gamma_to_sigma_grid(
+    size: int,
+    min_factor: float = 0.65,
+    max_factor: float = 1.15,
+) -> np.ndarray:
+    """Create a smooth spatially varying 2D gamma-to-sigma factor grid."""
+    x = np.linspace(min_factor, max_factor, size, dtype=np.float32)
+    y = np.linspace(0.95, 1.05, size, dtype=np.float32)
+    return (y[:, None] * x[None, :]).astype(np.float32)
+
+
 def create_fake_gcov(
     path: Path,
     size: int = 400,
@@ -24,6 +35,9 @@ def create_fake_gcov(
     seed: int = 42,
     change_region: tuple[int, int, int, int] | None = None,
     change_amount_db: float = -6.0,
+    gamma_to_sigma: float | np.ndarray | None = 1.0,
+    base_db_value: float | None = None,
+    nan_fraction: float = 0.05,
 ) -> Path:
     """
     Create a fake NISAR GCOV HDF5 file.
@@ -37,6 +51,9 @@ def create_fake_gcov(
         seed: Random seed for reproducibility
         change_region: Optional (x_start, y_start, width, height) for a region with changed values
         change_amount_db: Amount of change in dB for the change region
+        gamma_to_sigma: Scalar float, 2D (size x size) array, or None (omit dataset)
+        base_db_value: Optional constant background dB value (instead of random uniform)
+        nan_fraction: Fraction of pixels to set to NaN
     
     Returns:
         Path to the created file
@@ -76,10 +93,13 @@ def create_fake_gcov(
         
         # Create polarization datasets
         for pol_code in pol_codes:
-            # Generate random power values (linear, gamma-0)
+            # Generate power values (linear, gamma-0)
             # Real GCOV values are typically in the range of small positive numbers
             # Convert from dB to linear: 10^(dB/10)
-            base_db = rng.uniform(-25, -5, size=(size, size))
+            if base_db_value is not None:
+                base_db = np.full((size, size), base_db_value, dtype=np.float64)
+            else:
+                base_db = rng.uniform(-25, -5, size=(size, size))
             power = 10 ** (base_db / 10)
             
             # Add a change region if specified
@@ -99,8 +119,7 @@ def create_fake_gcov(
                 power[y_start:y_end, x_start:x_end] *= change_factor
             
             # Add some invalid pixels (NaN)
-            # Set 5% of pixels to NaN
-            nan_mask = rng.random((size, size)) < 0.05
+            nan_mask = rng.random((size, size)) < nan_fraction
             power[nan_mask] = np.nan
             
             # Store as float32
@@ -125,12 +144,24 @@ def create_fake_gcov(
             dtype=np.float32,
         )
         
-        # Create rtcGammaToSigmaFactor if it exists
-        gcov_group.create_dataset(
-            "rtcGammaToSigmaFactor",
-            data=np.ones((), dtype=np.float32),
-            dtype=np.float32,
-        )
+        # Create rtcGammaToSigmaFactor (scalar or 2D grid) unless omitted
+        if gamma_to_sigma is not None:
+            if isinstance(gamma_to_sigma, np.ndarray):
+                if gamma_to_sigma.ndim == 0:
+                    factor_data = np.array(gamma_to_sigma, dtype=np.float32)
+                elif gamma_to_sigma.shape == (size, size):
+                    factor_data = gamma_to_sigma.astype(np.float32)
+                else:
+                    raise ValueError(
+                        f"gamma_to_sigma array shape {gamma_to_sigma.shape} must be () or ({size}, {size})"
+                    )
+            else:
+                factor_data = np.array(float(gamma_to_sigma), dtype=np.float32)
+            gcov_group.create_dataset(
+                "rtcGammaToSigmaFactor",
+                data=factor_data,
+                dtype=np.float32,
+            )
         
         # Store metadata as attributes on the root
         f.attrs["granule_name"] = path.name
@@ -162,6 +193,8 @@ def create_fake_gcov_pair(
     loc: str = "J",
     change_amount_db: float = -6.0,
     cycle: int = 4,
+    gamma_to_sigma_1: float | np.ndarray | None = 1.0,
+    gamma_to_sigma_2: float | np.ndarray | None = 1.0,
 ) -> tuple[Path, Path]:
     """
     Create a pair of fake GCOV files for before/after comparison testing.
@@ -209,6 +242,7 @@ def create_fake_gcov_pair(
         crs_epsg=crs_epsg,
         pol_codes=pol_codes,
         seed=42,
+        gamma_to_sigma=gamma_to_sigma_1,
     )
     
     # Create second granule (after) with change region
@@ -229,6 +263,7 @@ def create_fake_gcov_pair(
         seed=43,  # Different seed for different random values
         change_region=change_region,
         change_amount_db=change_amount_db,
+        gamma_to_sigma=gamma_to_sigma_2,
     )
     
     return path1, path2

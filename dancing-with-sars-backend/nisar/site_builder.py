@@ -30,6 +30,7 @@ from nisar.models import (
     KnownGap,
     Layer,
     Manifest,
+    NormalizationInfo,
     PairManifest,
     PairStatsModel,
     PolarizationInfo,
@@ -41,6 +42,12 @@ from nisar.models import (
     TimeSeriesResponse,
 )
 from nisar.naming import NisarGranuleName, parse_granule_name
+from nisar.normalize import (
+    NormalizationProvenance,
+    apply_gamma_to_sigma,
+    combine_pair_normalization,
+    summarize_site_normalization,
+)
 from nisar.processing import compute_time_series, process_pair, smooth_linear, to_db
 from nisar.reader import GcovReader, InvalidFileError
 
@@ -315,6 +322,7 @@ def build_site(
     windows: dict[str, dict[str, Any]] = {pol: {} for pol in config.polarizations}
     acquisitions: list[Acquisition] = []
     first_window = None
+    normalization_provenances: list[NormalizationProvenance] = []
 
     for path, parsed in matches:
         actual_pols = _read_polarizations(path)
@@ -338,9 +346,11 @@ def build_site(
         acquisitions.append(acquisition)
         for pol in available:
             window = reader.read_window(path, config.bbox, pol=pol, use_cache=True)
-            windows[pol][parsed.date.replace("-", "")] = (window, parsed)
+            normalized = apply_gamma_to_sigma(window)
+            normalization_provenances.append(normalized.normalization)
+            windows[pol][parsed.date.replace("-", "")] = (normalized, parsed)
             if first_window is None:
-                first_window = window
+                first_window = normalized
 
     if first_window is None:
         raise SiteBuildError("None of the selected granules have the configured polarizations")
@@ -369,6 +379,7 @@ def build_site(
         minimum: float | None = None,
         maximum: float | None = None,
         legend: str | None = None,
+        normalization: NormalizationInfo | None = None,
     ) -> None:
         nonlocal remaining_budget
         cog_relative = Path("cogs") / f"{layer_id}.tif"
@@ -399,6 +410,7 @@ def build_site(
             min_zoom=tile_config.min_zoom,
             max_zoom=tile_config.max_zoom,
             legend=legend,
+            normalization=normalization,
         ))
 
     for pol in config.polarizations:
@@ -424,7 +436,8 @@ def build_site(
                 date_value=parsed.date,
                 minimum=-30,
                 maximum=0,
-                legend="Backscatter (dB), brighter means a stronger return",
+                legend="Backscatter (dB, normalized sigma0), brighter means a stronger return",
+                normalization=window.normalization.to_model(),
             )
         valid_chunks = [array[np.isfinite(array)] for array in db_arrays if np.isfinite(array).any()]
         if not valid_chunks:
@@ -465,6 +478,10 @@ def build_site(
                 )
             pre_window, _ = pol_windows[pre_key]
             post_window, _ = pol_windows[post_key]
+            pair_norm = combine_pair_normalization(
+                pre_window.normalization,
+                post_window.normalization,
+            ).to_model()
             diff, per_threshold, resampled = process_pair(
                 pre_window,
                 post_window,
@@ -484,6 +501,7 @@ def build_site(
                 minimum=-15,
                 maximum=15,
                 legend="Finish minus start backscatter (dB): blue lower, red higher",
+                normalization=pair_norm,
             )
             pair_stats_by_pol[pol] = {}
             serialized_stats[pol] = {}
@@ -505,6 +523,7 @@ def build_site(
                     minimum=-1,
                     maximum=1,
                     legend="Blue = lower return, red = higher return",
+                    normalization=pair_norm,
                 )
                 stats_model = PairStatsModel(
                     valid_pixels=stats.valid_pixels,
@@ -546,6 +565,9 @@ def build_site(
             pixel_spacing_m=first_window.spacing_m,
             crs=first_window.crs,
             frequency="A",
+            normalization=summarize_site_normalization(
+                normalization_provenances
+            ).to_model(),
         ),
         stack={
             "track": stack.track,
