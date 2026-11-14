@@ -113,6 +113,25 @@ class TileConfig(BaseModel):
 
 
 # Manifest models
+class NormalizationInfo(BaseModel):
+    """Radiometric normalization provenance."""
+
+    method: str = Field(..., description="Normalization method identifier")
+    factor_kind: str | None = Field(
+        default=None,
+        description="Kind of factor applied: scalar | grid | mixed | None",
+    )
+    source: str = Field(
+        default="gcov.rtcGammaToSigmaFactor",
+        description="Source dataset for normalization factor",
+    )
+    applied: bool = Field(..., description="Whether normalization was applied")
+    warning: str | None = Field(
+        default=None,
+        description="Warning recorded when normalization was skipped or masked pixels",
+    )
+
+
 class SourceInfo(BaseModel):
     """Source information for a site."""
     
@@ -124,6 +143,10 @@ class SourceInfo(BaseModel):
     frequency: str = Field(default="A", description="Frequency A or B")
     pixel_spacing_m: float = Field(..., description="Pixel spacing in meters")
     crs: str = Field(..., description="Coordinate reference system")
+    normalization: NormalizationInfo | None = Field(
+        default=None,
+        description="Summary radiometric normalization provenance",
+    )
 
 
 class SiteInfo(BaseModel):
@@ -183,6 +206,10 @@ class Layer(BaseModel):
     min_zoom: int = Field(..., description="Minimum zoom")
     max_zoom: int = Field(..., description="Maximum zoom")
     legend: str | None = Field(default=None, description="Legend text")
+    normalization: NormalizationInfo | None = Field(
+        default=None,
+        description="Radiometric normalization provenance",
+    )
     
     @field_validator("kind")
     @classmethod

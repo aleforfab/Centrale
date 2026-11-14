@@ -15,6 +15,8 @@ from dataclasses import dataclass
 import numpy as np
 from scipy import ndimage
 
+from nisar.normalize import apply_gamma_to_sigma
+
 logger = logging.getLogger(__name__)
 
 
@@ -374,37 +376,42 @@ def histogram(
 
 
 def process_pair(
-    pre_window: object,  # Window from reader
-    post_window: object,  # Window from reader
+    pre_window: object,  # Window or NormalizedWindow from reader/normalize
+    post_window: object,  # Window or NormalizedWindow from reader/normalize
     smoothing_px: int = DEFAULT_SMOOTHING_PX,
     thresholds_db: list[float] = DEFAULT_THRESHOLDS_DB,
-) -> tuple[np.ndarray, np.ndarray, dict[float, PairStats], bool]:
+) -> tuple[np.ndarray, dict[float, PairStats], bool]:
     """
     Process a pair of windows to compute difference and statistics.
     
+    Normalizes gamma0 -> sigma0 in linear power (if not already normalized)
+    before smoothing, resampling, and dB conversion.
+
     Args:
-        pre_window: Window from pre-event
-        post_window: Window from post-event
+        pre_window: Window or NormalizedWindow from pre-event
+        post_window: Window or NormalizedWindow from post-event
         smoothing_px: Smoothing kernel size in pixels
         thresholds_db: List of thresholds in dB
     
     Returns:
         Tuple of:
         - diff_db: Difference array in dB
-        - diff_map: Visualization-ready difference array (for export)
         - stats: Dictionary mapping threshold to PairStats
         - resampled: Whether grids were resampled
     """
+    pre_norm = apply_gamma_to_sigma(pre_window)
+    post_norm = apply_gamma_to_sigma(post_window)
+
     # Check if grids match
     grids_match = (
-        pre_window.power.shape == post_window.power.shape and
-        np.allclose(pre_window.transform, post_window.transform) and
-        pre_window.crs == post_window.crs
+        pre_norm.power.shape == post_norm.power.shape and
+        np.allclose(pre_norm.transform, post_norm.transform) and
+        pre_norm.crs == post_norm.crs
     )
     
-    # Smooth and convert to dB
-    pre_power = pre_window.power.copy()
-    post_power = post_window.power.copy()
+    # Smooth and convert to dB in normalized linear sigma0 power
+    pre_power = pre_norm.power.copy()
+    post_power = post_norm.power.copy()
     
     # Apply smoothing in linear power
     if smoothing_px > 1:
@@ -416,16 +423,16 @@ def process_pair(
     if not grids_match:
         post_power, resampled = ensure_same_grid(
             pre_power=pre_power,
-            pre_transform=pre_window.transform,
-            pre_spacing=pre_window.spacing_m,
+            pre_transform=pre_norm.transform,
+            pre_spacing=pre_norm.spacing_m,
             post_power=post_power,
-            post_transform=post_window.transform,
-            post_spacing=post_window.spacing_m,
-            pre_crs=pre_window.crs,
-            post_crs=post_window.crs,
+            post_transform=post_norm.transform,
+            post_spacing=post_norm.spacing_m,
+            pre_crs=pre_norm.crs,
+            post_crs=post_norm.crs,
         )
 
-    # Convert to dB only after resampling linear power.
+    # Convert to dB only after normalization and resampling linear power.
     pre_db = to_db(pre_power)
     post_db = to_db(post_power)
     
@@ -435,7 +442,7 @@ def process_pair(
     # Compute stats
     stats = area_stats(
         diff_db_array,
-        spacing_m=pre_window.spacing_m,
+        spacing_m=pre_norm.spacing_m,
         thresholds_db=thresholds_db,
         resampled=resampled,
     )
@@ -444,14 +451,17 @@ def process_pair(
 
 
 def compute_time_series(
-    windows: list[object],  # List of Window objects
+    windows: list[object],  # List of Window or NormalizedWindow objects
     smoothing_px: int = DEFAULT_SMOOTHING_PX,
 ) -> list[TimeSeriesPoint]:
     """
     Compute time series of mean backscatter for a stack of windows.
     
+    Normalizes gamma0 -> sigma0 in linear power (if not already normalized)
+    before smoothing and dB conversion.
+
     Args:
-        windows: List of Window objects for each acquisition
+        windows: List of Window or NormalizedWindow objects for each acquisition
         smoothing_px: Smoothing kernel size in pixels
     
     Returns:
@@ -463,8 +473,9 @@ def compute_time_series(
     
     for window in windows:
         granule = parse_granule_name(window.granule)
-        # Apply smoothing
-        power = window.power.copy()
+        norm_window = apply_gamma_to_sigma(window)
+        # Apply smoothing in normalized linear power
+        power = norm_window.power.copy()
         if smoothing_px > 1:
             power = smooth_linear(power, smoothing_px)
         
