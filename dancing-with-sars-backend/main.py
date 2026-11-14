@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from nisar.config import Config
+from routers.insar import router as insar_router
 from routers.nisar import router as nisar_router
 from routers.sites import router as sites_router
 from schemas import (
@@ -70,6 +71,7 @@ app.add_middleware(
 )
 app.include_router(sites_router)
 app.include_router(nisar_router)
+app.include_router(insar_router)
 app.mount("/products", StaticFiles(directory=Config.get_products_dir()), name="products")
 
 
