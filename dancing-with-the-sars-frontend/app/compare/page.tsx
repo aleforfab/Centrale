@@ -23,8 +23,7 @@ const CALENDAR_PAIR_ID = "calendar-selection";
  *
  * The catalogue vocabulary (`.plate*`, `.colophon`, `.field*`, `.footnote`) is
  * owned by `app/redesign.css` (slice 07) and is used here by name only.
- * Utilities add this page's own layout around it. That stylesheet loads after
- * Tailwind, so a utility that must beat a vocabulary reset carries the `!` modifier.
+ * Utilities add this page's own layout around it.
  */
 const MONO = "font-[family-name:var(--font-mono)]";
 const DISPLAY = "font-[family-name:var(--font-display)]";
@@ -32,18 +31,18 @@ const DISPLAY = "font-[family-name:var(--font-display)]";
 const LABEL = `${MONO} text-[11px] uppercase leading-[1.4] tracking-[0.18em] text-[color:var(--ink-mute)]`;
 const PLATE = "plate";
 const PLATE_TAG = "plate__tag";
-const PLATE_HEADER = "plate__header";
-const PLATE_META = "plate__meta";
+const PLATE_HEADER = "plate__header gap-4";
+const PLATE_RIGHT_TAG = "plate__right-tag shrink-0";
 const COLOPHON = "colophon";
 const FOOTNOTE = "footnote";
-const FIELD_LABEL = "field__label";
-const FIELD_CONTROL = "field__input h-[38px]";
+/* `.field` styles its own label and control; this only equalises select and date-input heights. */
+const FIELD_CONTROL = "h-[38px] w-full";
 const TEXT_LINK = `${MONO} text-[11px] uppercase tracking-[0.14em] text-[color:var(--accent)] underline underline-offset-2`;
 
 function Field({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
   return (
     <div className="field flex min-w-[11rem] flex-1 flex-col gap-1">
-      <label htmlFor={id} className={FIELD_LABEL}>{label}</label>
+      <label htmlFor={id}>{label}</label>
       {children}
     </div>
   );
@@ -97,7 +96,7 @@ function DiptychCell({ tag, date, pol, installed, divided = false }: DiptychCell
       >
         {date || "—"}
       </p>
-      <p className={`${FOOTNOTE} !mt-2`}>
+      <p className={`${FOOTNOTE} mt-2`}>
         {!date
           ? "No date selected."
           : installed
@@ -222,7 +221,7 @@ export default function ComparePage() {
             <div className="min-w-0">
               <p className="font-semibold">The catalogue or site could not be loaded.</p>
               <p className="mt-1 [overflow-wrap:anywhere]">{error}</p>
-              <p className={`${FOOTNOTE} !mt-1`}>
+              <p className={`${FOOTNOTE} mt-1`}>
                 The viewer shows installed products; a live fetch requires an explicit request.
               </p>
             </div>
@@ -241,9 +240,9 @@ export default function ComparePage() {
         <section className={`${PLATE} mx-auto my-12 max-w-[720px]`} aria-labelledby="compare-empty-title">
           <header className={PLATE_HEADER}>
             <p className={PLATE_TAG}>Diptych</p>
-            <p className={PLATE_META}>0 installed sites</p>
+            <p className={PLATE_RIGHT_TAG}>0 installed sites</p>
           </header>
-          <div className="space-y-4">
+          <div className="plate__body space-y-4">
             <h2 id="compare-empty-title" className={`${DISPLAY} text-[22px] font-extrabold leading-tight tracking-[-0.02em] text-[color:var(--ink)]`}>
               No installed products to compare
             </h2>
@@ -312,7 +311,7 @@ export default function ComparePage() {
                 </select>
               </Field>
             </div>
-            <p className={`${FOOTNOTE} !mt-2`} aria-label="Exact observation dates">Available {pol} dates: {availableDates.join(" · ") || "none"}</p>
+            <p className={`${FOOTNOTE} mt-2`} aria-label="Exact observation dates">Available {pol} dates: {availableDates.join(" · ") || "none"}</p>
           </div>
 
           {calendarError && (

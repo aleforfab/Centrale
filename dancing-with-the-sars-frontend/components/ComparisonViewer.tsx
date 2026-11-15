@@ -32,8 +32,7 @@ const FALLBACK_STYLE = {
 /*
  * Visual vocabulary — REDESIGN_GUIDE §5/§6. The catalogue classes (`.plate*`,
  * `.rule-table`, `.colophon`, `.footnote`) are owned by `app/redesign.css`
- * (slice 07) and are used here by name only. That stylesheet loads after
- * Tailwind, so a utility that must beat a vocabulary reset carries the `!` modifier.
+ * and are used here by name only.
  */
 const MONO = "font-[family-name:var(--font-mono)]";
 const DISPLAY = "font-[family-name:var(--font-display)]";
@@ -42,7 +41,11 @@ const PLATE = "plate";
 const PLATE_CAPTION = "plate__caption";
 const COLOPHON = "colophon";
 const FOOTNOTE = "footnote";
-const RULE_TABLE = "rule-table";
+/*
+ * Label / value tables use `<th scope="row">`. `.rule-table th` is drawn for
+ * column heads (strong rule), so row heads take the hairline the value cells use.
+ */
+const RULE_TABLE = "rule-table [&_td]:align-top [&_th]:align-top [&_tbody_th]:border-b-[color:var(--hairline)] [&_tbody_tr:last-child_th]:border-b-0";
 /* Guide §3 on-imagery chip: the one dark exception (literal values, no token). */
 const IMAGERY_CHIP = `${MONO} rounded-[2px] border border-[rgba(245,243,236,0.24)] bg-[rgba(13,12,10,0.88)] text-[#F5F3EC]`;
 
@@ -179,18 +182,18 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
 
   if (!result.ok) {
     return (
-      <section className={COLOPHON} role="status">
+      <div className={COLOPHON} role="status">
         <h2 className={`${DISPLAY} text-[16px] font-extrabold leading-tight tracking-[-0.02em] text-[color:var(--ink)]`}>
           This pair cannot be compared exactly
         </h2>
         <p className="mt-2">{result.problem.message}</p>
         {result.problem.available && result.problem.available.length > 0 && (
-          <p className={`${FOOTNOTE} !mt-2`}>Available: {result.problem.available.join(", ")}</p>
+          <p className={`${FOOTNOTE} mt-2`}>Available: {result.problem.available.join(", ")}</p>
         )}
         <p className="mt-3">
           No substitute date, polarization or difference product is used to fill the gap.
         </p>
-      </section>
+      </div>
     );
   }
 
@@ -201,7 +204,7 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
       <section className="min-w-0 xl:col-span-8" aria-label="Before and after imagery">
         <div className={PLATE}>
-          <div className="plate__body relative h-[26rem] overflow-hidden bg-[#0D0C0A] sm:h-[32rem]">
+          <div className="relative h-[26rem] overflow-hidden bg-[#0D0C0A] sm:h-[32rem]">
             <>
               <div className="absolute inset-0">
                 <div ref={beforeContainer} className="h-full w-full" data-testid="map-before" />
@@ -295,7 +298,7 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
             aria-label="Reveal before and after imagery"
           />
         </label>
-        <p className={`${FOOTNOTE} !mt-2`}>
+        <p className={`${FOOTNOTE} mt-2`}>
           Use the slider below to reveal the later date; clicking or dragging on the imagery does not change the
           view. Apparent brightness also depends on the display stretch applied to each layer, not only on the
           surface.
@@ -308,7 +311,7 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
           <h2 className={`${DISPLAY} mt-1 text-[20px] font-extrabold leading-[1.15] tracking-[-0.02em] text-[color:var(--ink)]`}>
             {active.siteTitle}
           </h2>
-          <p className={`${FOOTNOTE} !mt-1`}>
+          <p className={`${FOOTNOTE} mt-1`}>
             {active.pairLabel} · {active.pol}
           </p>
           <table className={`${RULE_TABLE} mt-3`}>
@@ -337,7 +340,7 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
               </tr>
               <tr>
                 <th scope="row">Acquisition IDs</th>
-                <td className="break-all !text-[10px]">
+                <td className="break-all text-[10px]">
                   {active.before.acquisition?.granule ?? active.before.layer.id}
                   <br />
                   {active.after.acquisition?.granule ?? active.after.layer.id}

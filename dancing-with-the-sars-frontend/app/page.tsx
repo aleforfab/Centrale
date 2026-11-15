@@ -20,8 +20,8 @@ import type {
  * The catalogue vocabulary (`.plate*`, `.index-row`, `.rule-table`, `.colophon`,
  * `.field*`, `.footnote`) is owned by `app/redesign.css` (slice 07) and is used
  * here by name only. Utilities add this page's own layout around it. That
- * stylesheet loads after Tailwind, so a utility that must beat a vocabulary
- * reset (a margin on `.footnote`, say) carries the `!` modifier.
+ * stylesheet loads after Tailwind, so the few utilities that must beat one of
+ * its rules carry the `!` modifier.
  */
 const MONO = "font-[family-name:var(--font-mono)]";
 const DISPLAY = "font-[family-name:var(--font-display)]";
@@ -29,12 +29,12 @@ const DISPLAY = "font-[family-name:var(--font-display)]";
 const LABEL = `${MONO} text-[11px] uppercase leading-[1.4] tracking-[0.18em] text-[color:var(--ink-mute)]`;
 const PLATE = "plate";
 const PLATE_TAG = "plate__tag";
-const PLATE_HEADER = "plate__header";
-const PLATE_META = "plate__meta";
+const PLATE_HEADER = "plate__header gap-4";
+const PLATE_RIGHT_TAG = "plate__right-tag shrink-0";
 const PLATE_CAPTION = "plate__caption";
 const COLOPHON = "colophon";
 const FOOTNOTE = "footnote";
-/* Separators, hover and the `data-active` marker belong to `.index-row`. */
+/* Separators and hover belong to `.index-row`; the active marker is drawn on the inner wrapper. */
 const INDEX_ROW = "index-row";
 /*
  * Layout lives on an inner wrapper wherever a vocabulary element needs one, so
@@ -42,9 +42,13 @@ const INDEX_ROW = "index-row";
  * the content. `col-span-full` only matters if the parent is a grid.
  */
 const ROW = "col-span-full flex w-full min-w-0";
-const RULE_TABLE = "rule-table";
-const FIELD_LABEL = "field__label";
-const FIELD_CONTROL = "field__input h-[38px]";
+/*
+ * Label / value tables use `<th scope="row">`. `.rule-table th` is drawn for
+ * column heads (strong rule), so row heads take the hairline the value cells use.
+ */
+const RULE_TABLE = "rule-table [&_td]:align-top [&_th]:align-top [&_tbody_th]:border-b-[color:var(--hairline)] [&_tbody_tr:last-child_th]:border-b-0";
+/* `.field` styles its own label and control; this only equalises select and date-input heights. */
+const FIELD_CONTROL = "h-[38px] w-full";
 const CHIP = "tm-chip uppercase";
 const TEXT_LINK = `${MONO} text-[11px] uppercase tracking-[0.14em] text-[color:var(--accent)] underline underline-offset-2`;
 /* Guide §3 on-imagery chip: the one dark exception (literal values, no token). */
@@ -95,7 +99,7 @@ function kindLabel(kind: ProductLayer["kind"]): string {
 function Field({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
   return (
     <div className="field min-w-[11rem]">
-      <label htmlFor={id} className={FIELD_LABEL}>{label}</label>
+      <label htmlFor={id}>{label}</label>
       {children}
     </div>
   );
@@ -269,9 +273,9 @@ export default function Home() {
         <section className={`${PLATE} mx-auto my-12 max-w-[720px]`} aria-labelledby="dashboard-empty-title">
           <header className={PLATE_HEADER}>
             <p className={PLATE_TAG}>Catalogue</p>
-            <p className={PLATE_META}>0 installed sites</p>
+            <p className={PLATE_RIGHT_TAG}>0 installed sites</p>
           </header>
-          <div className="space-y-4">
+          <div className="plate__body space-y-4">
             <h2 id="dashboard-empty-title" className={`${DISPLAY} text-[22px] font-extrabold leading-tight tracking-[-0.02em] text-[color:var(--ink)]`}>
               No precomputed products yet
             </h2>
@@ -300,9 +304,9 @@ export default function Home() {
                     : " · no layer selected"}
                 </span>
               </p>
-              <p className={PLATE_META}>{manifest.source.maturity}</p>
+              <p className={PLATE_RIGHT_TAG}>{manifest.source.maturity}</p>
             </header>
-            <div className="plate__body relative h-[clamp(440px,66vh,760px)]">
+            <div className="relative h-[clamp(440px,66vh,760px)]">
               <Map
                 bbox={manifest.site.bbox}
                 layers={visibleLayers}
@@ -358,8 +362,8 @@ export default function Home() {
                     const isActive = layer?.id === item.id;
                     const isVisible = visibleLayerIds.includes(item.id);
                     return (
-                      <li key={item.id} className={INDEX_ROW} data-active={isActive ? "true" : undefined}>
-                        <div className={`${ROW} items-start gap-3`}>
+                      <li key={item.id} className={INDEX_ROW}>
+                        <div className={`${ROW} items-start gap-3 border-l-2 pl-2 ${isActive ? "border-[color:var(--accent)]" : "border-transparent"}`}>
                           <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5">
                             <input
                               type="radio"
@@ -395,7 +399,7 @@ export default function Home() {
                   })}
                 </ul>
                 {layer?.legend && (
-                  <p className={`${FOOTNOTE} !mt-3 px-4`}>
+                  <p className={`${FOOTNOTE} mt-3 px-4`}>
                     <span className="uppercase tracking-[0.14em] text-[color:var(--ink-soft)]">Legend</span>
                     {" — "}{layer.legend}
                   </p>
@@ -484,25 +488,25 @@ export default function Home() {
                         </tbody>
                       </table>
                       {stats.histogram.length > 0 && (
-                        <div className="tm-spark mt-4 flex h-[54px] items-end gap-[2px]" role="img" aria-label="Difference histogram">
+                        <div className="tm-spark" role="img" aria-label="Difference histogram">
                           {stats.histogram.map((count, index) => (
                             <i
                               key={index}
                               title={`Bin ${index + 1}: ${count} pixels`}
-                              className="block min-h-[2px] flex-1 bg-[color:var(--ink)]"
+                              className="block ![background:var(--ink)] !rounded-none"
                               style={{ height: `${Math.max(4, count / histogramPeak * 100)}%` }}
                             />
                           ))}
                         </div>
                       )}
-                      <p className={`${FOOTNOTE} !mt-3`}>
+                      <p className={`${FOOTNOTE} mt-3`}>
                         {stats.resampled ? "Post-event data were resampled to the pre-event grid." : "Acquisition grids were aligned."}
                         {" "}Backscatter change does not determine its cause. These are measured outputs, not a
                         validated scientific result.
                       </p>
                     </>
                   ) : (
-                    <p className={`${FOOTNOTE} !mt-3`}>
+                    <p className={`${FOOTNOTE} mt-3`}>
                       No pair product is active. Select a difference or change-mask layer under Layers to read its measured statistics.
                     </p>
                   )}
