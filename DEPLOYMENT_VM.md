@@ -1,12 +1,51 @@
 # VM deployment runbook (Google Cloud, Debian 13)
 
-**Nothing in this file has been executed on the VM yet.** It is the plan that
+**Nothing in this file has been executed on the VM yet.** The deployment of `main` and the verification below remain pending; the VM currently serves an older build. Executing this section is required before any round-3 (rebrand) or map-fix claim is made publicly. It is the plan that
 follows the migration. Steps are ordered so each one can be verified before the
 next. Current state: [`MIGRATION_STATUS.md`](MIGRATION_STATUS.md).
 
 Console-side work (billing, firewall, IAM, snapshots, IP, costs) lives in
 [`GCP_CHECKLIST.md`](GCP_CHECKLIST.md) and is owned by the project's Google Cloud
 lead. This file starts at SSH.
+
+## Post-merge rebuild procedure (2026-11-15) — execute before any public claim
+
+The VM serves `main`; rounds 2–3 changed the frontend completely. Until this is
+done, the public site is stale and unverifiable offline.
+
+```bash
+cd ~/centrale   # or wherever the repo lives on the VM
+git fetch origin
+git log --oneline -3              # expect 25878e4 or newer (Round 3 merges)
+git pull --ff-only
+git rev-parse HEAD                # RECORD THIS; it is what you are running
+```
+
+1. **Remove `NEXT_PUBLIC_API_URL` from the frontend env file** (`.env.local` or the
+   service unit). The same-origin proxy design in `next.config.mjs` is correct and
+   must not be reintroduced; leaving the variable set re-breaks tile URLs.
+2. `cd dancing-with-the-sars-frontend && npm ci && npm run typecheck && npm test && npm run build`
+3. Restart the Next.js service (systemd unit or process manager as configured).
+4. **Verification checklist on the public URL** (https://dancing-sars.duckdns.org/):
+   - `/` raster draws (no `%7Bz%7D` requests in the network tab); site-bbox
+     footprint line visible; ScaleControl visible bottom-right; imagery
+     basemap loads; synthetic caveat visible.
+   - SAR/optical toggle switches basemap correctly.
+   - `/compare`: tiles draw both sides; before/after slider works; refused
+     dates show the colophon refusal (try a non-installed date).
+   - `/time-machine`: press ▶ — frames must swap **without flash** (the round-2
+     visibility-toggle fix); exact-date input refuses non-installed dates; scan
+     window accepts your own dates.
+   - `/method` renders (masthead, honesty register, P05023 table).
+   - A bogus route shows the paper 404 plate.
+   - Fonts: Archivo/IBM Plex Mono load from Google Fonts (runtime @import) —
+     needs egress from the viewing browser; page still works with fallbacks.
+   - Mapbox quota/429s: if tiles 429, that is the Mapbox plan, not this fix.
+5. Record the executed steps and the verification results in
+   `docs/IMPLEMENTATION_VERIFICATION.md` (append a dated entry) in a PR.
+
+Rollback: `git pull --ff-only` again to the previous merge commit; revert merges
+in reverse order if instructed (04/15-class fixes ride on the rebrand).
 
 ## Already completed on the VM — do not repeat
 

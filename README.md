@@ -11,16 +11,19 @@ between acquisitions of the same stack, and presents them with their provenance.
 **What this is not:** a flood detector, a damage assessment, a displacement
 measurement, or a validated scientific result. Backscatter change is a measured
 difference; it does not identify a cause. No real NISAR case has been processed
-yet. Read [`MIGRATION_STATUS.md`](MIGRATION_STATUS.md) for the current state.
+yet. Read [`MIGRATION_STATUS.md`](MIGRATION_STATUS.md) for the current state; the implementation ledger and verification record live in
+[`docs/IMPLEMENTATION_VERIFICATION.md`](docs/IMPLEMENTATION_VERIFICATION.md), and
+phase history in [`HACKATHON.md`](HACKATHON.md) and [`agent-team/PLAN.md`](agent-team/PLAN.md).
 
 ## Interfaces
 
 | Route | What it does |
 | --- | --- |
-| `/` | Dashboard: site and layer selection, map overlays, statistics, time series, acquisition provenance |
-| `/compare` | Before/after viewer: one curated pair, one polarization, two exact dates, reveal slider, locked cameras |
-| `/applications` | Twelve NISAR application topics with capability labels, limits, and the methods a real study would need |
-| `/setup` | The eight gates a topic must pass before it becomes a published case |
+| `/` | Observation Plate: installed NISAR product layers, exact dates, measured change statistics, map + provenance |
+| `/compare` | Before/after diptych: one polarization, two exact installed dates, reveal slider, locked cameras, no substitutions |
+| `/time-machine` | Live-fetch scan (operator-side) + Worldview-style playback of exact backscatter frames, before/after mode |
+| `/method` | Method & honesty register: data, processing, what the numbers are and are not, provenance |
+
 
 Supporting material:
 
@@ -116,18 +119,6 @@ Current results are recorded in
 [`docs/IMPLEMENTATION_VERIFICATION.md`](docs/IMPLEMENTATION_VERIFICATION.md).
 `npm audit` is not clean; advisories are reported rather than silenced.
 
-## The applications library and capability labels
-
-The library summarises twelve NISAR application topics. Every topic carries a
-capability label, and the label is **derived**, not typed by hand:
-
-- **Learning resource** — educational topic, not a working detector.
-- **Exploratory case** — real observations for this topic are installed.
-- **Validated for this case** — a documented review exists for one specific case.
-
-`CASE_REVIEWS` in `lib/applications.ts` is empty, so all twelve topics render as
-learning resources. Adding a review record is the only way to promote one, and it
-promotes only that case.
 
 ## Source register
 

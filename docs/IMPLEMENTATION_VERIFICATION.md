@@ -154,3 +154,58 @@ Date:
 
 A filled template supports one case. It does not validate the topic, the
 pipeline, or any other site.
+
+---
+
+## 2026-11-15 — Round 3 integration verification (fresh detached worktree of `origin/main` @ `25878e4`)
+
+Executed in the agent sandbox; **not** the VM. Nothing below is a browser-pixel
+claim. Environment: Node.js 22.22.3, npm 10.9.8, Python 3.13 venv (Linux).
+
+### Frontend
+
+```bash
+cd dancing-with-the-sars-frontend
+npm ci
+npm run typecheck   # clean, 0 errors
+npm test            # Test Files 9 passed (9) · Tests 65 passed (65)
+npm run build       # OK — routes: / (619 kB), /compare (618 kB), /time-machine (623 kB),
+                    # /method (96 kB, 194 B page JS), /_not-found (custom 404),
+                    # /tm/scan + /tm/frames/[date] (dynamic, unchanged)
+```
+
+Test-count movement is explained by intentional deletions: `applications.test.ts`
+(round 2) and `source-register.test.ts` (round 3, 10 tests) retired with their
+dead modules; `live-scan-panel.test.tsx` added in round 2. No unexplained loss.
+
+### Backend
+
+```bash
+cd dancing-with-sars-backend
+pip install -r requirements.txt -r requirements-dev.txt
+ruff check .        # All checks passed!
+pytest -q           # 157 passed, 11 warnings (dependency warnings, pre-existing)
+```
+
+### SSR smoke (production build, `next start` on 127.0.0.1:3100)
+
+| Request | Status | Marker content present |
+| --- | --- | --- |
+| `/` | 200 | masthead wordmark, `NISAR · L-band · GCOV`, `/method` link, PROVISIONAL copy |
+| `/compare` | 200 | diptych headers, dates, colophon slot |
+| `/time-machine` | 200 | field-log chrome, live-scan panel |
+| `/method` | 200 | honesty register; `P05023`, PROVISIONAL, Gate 2 marked not executed, InSAR marked proposed |
+| `/definitely-not-a-page` | 404 | `PAGE NOT IN THE CATALOGUE` plate |
+
+### Explicitly NOT verified
+
+- Any browser rendering; Mapbox basemap/raster/footprint/ScaleControl pixels.
+- Playback frame-swap without flash (round-2 fix) in a live browser.
+- The deployed site (`https://dancing-sars.duckdns.org/`) — VM still serves an older build.
+- Real NISAR granules; Gate 2 (Anak Krakatau) remains unexecuted; InSAR unverified.
+- Google Fonts runtime `@import` behavior with client network restrictions.
+- Mapbox token restrictions/quotas.
+
+**Merging is not deploying.** The VM rebuild per `DEPLOYMENT_VM.md` (post-merge
+rebuild section, 2026-11-15) is required before the rebrand or the map fix are
+visible publicly.
