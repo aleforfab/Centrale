@@ -30,24 +30,21 @@ const FALLBACK_STYLE = {
 } as unknown as mapboxgl.Style;
 
 /*
- * Visual vocabulary — REDESIGN_GUIDE §5/§6. Vocabulary classes (`.plate`,
- * `.plate__caption`, `.rule-table`, `.colophon`, `.footnote`) are owned by
- * `app/redesign.css`; the utilities next to them restate the guide's fixed
- * token values on the same element, so a rule and its utility never stack.
+ * Visual vocabulary — REDESIGN_GUIDE §5/§6. The catalogue classes (`.plate*`,
+ * `.rule-table`, `.colophon`, `.footnote`) are owned by `app/redesign.css`
+ * (slice 07) and are used here by name only. That stylesheet loads after
+ * Tailwind, so a utility that must beat a vocabulary reset carries the `!` modifier.
  */
 const MONO = "font-[family-name:var(--font-mono)]";
 const DISPLAY = "font-[family-name:var(--font-display)]";
 const LABEL = `${MONO} text-[11px] uppercase leading-[1.4] tracking-[0.18em] text-[color:var(--ink-mute)]`;
-const PLATE = "plate rounded-[var(--radius)] border border-[color:var(--hairline-strong)] bg-[color:var(--paper)]";
-const PLATE_CAPTION = `plate__caption ${MONO} border-t border-[color:var(--hairline)] px-3 py-2 text-[11px] leading-[1.5] text-[color:var(--ink-mute)]`;
-const COLOPHON = "colophon border-l-[3px] border-[color:var(--accent-graphic)] bg-[color:var(--colophon)] px-3 py-2.5 text-[13px] leading-[1.55] text-[color:var(--ink)]";
-const FOOTNOTE = `footnote ${MONO} text-[11px] leading-[1.55] text-[color:var(--ink-mute)]`;
-const RULE_TABLE = "rule-table w-full border-collapse text-[12px]";
-const RULE_CELL = "border-t border-[color:var(--hairline)] py-1.5 align-baseline";
-const RULE_LABEL = `${RULE_CELL} pr-3 text-left font-normal text-[color:var(--ink-soft)]`;
-const RULE_VALUE = `${RULE_CELL} ${MONO} text-right text-[color:var(--ink)]`;
+const PLATE = "plate";
+const PLATE_CAPTION = "plate__caption";
+const COLOPHON = "colophon";
+const FOOTNOTE = "footnote";
+const RULE_TABLE = "rule-table";
 /* Guide §3 on-imagery chip: the one dark exception (literal values, no token). */
-const IMAGERY_CHIP = `${MONO} rounded-[2px] border border-[rgba(245,243,236,0.22)] bg-[rgba(13,12,10,0.88)] text-[#F5F3EC]`;
+const IMAGERY_CHIP = `${MONO} rounded-[2px] border border-[rgba(245,243,236,0.24)] bg-[rgba(13,12,10,0.88)] text-[#F5F3EC]`;
 
 export interface ComparisonViewerProps {
   manifest: SiteManifest;
@@ -188,7 +185,7 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
         </h2>
         <p className="mt-2">{result.problem.message}</p>
         {result.problem.available && result.problem.available.length > 0 && (
-          <p className={`${FOOTNOTE} mt-2`}>Available: {result.problem.available.join(", ")}</p>
+          <p className={`${FOOTNOTE} !mt-2`}>Available: {result.problem.available.join(", ")}</p>
         )}
         <p className="mt-3">
           No substitute date, polarization or difference product is used to fill the gap.
@@ -204,7 +201,7 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
       <section className="min-w-0 xl:col-span-8" aria-label="Before and after imagery">
         <div className={PLATE}>
-          <div className="relative h-[26rem] overflow-hidden bg-[#0D0C0A] sm:h-[32rem]">
+          <div className="plate__body relative h-[26rem] overflow-hidden bg-[#0D0C0A] sm:h-[32rem]">
             <>
               <div className="absolute inset-0">
                 <div ref={beforeContainer} className="h-full w-full" data-testid="map-before" />
@@ -298,7 +295,7 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
             aria-label="Reveal before and after imagery"
           />
         </label>
-        <p className={`${FOOTNOTE} mt-2`}>
+        <p className={`${FOOTNOTE} !mt-2`}>
           Use the slider below to reveal the later date; clicking or dragging on the imagery does not change the
           view. Apparent brightness also depends on the display stretch applied to each layer, not only on the
           surface.
@@ -311,48 +308,48 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
           <h2 className={`${DISPLAY} mt-1 text-[20px] font-extrabold leading-[1.15] tracking-[-0.02em] text-[color:var(--ink)]`}>
             {active.siteTitle}
           </h2>
-          <p className={`${FOOTNOTE} mt-1`}>
+          <p className={`${FOOTNOTE} !mt-1`}>
             {active.pairLabel} · {active.pol}
           </p>
           <table className={`${RULE_TABLE} mt-3`}>
             <tbody>
               <tr>
-                <th scope="row" className={RULE_LABEL}>Before</th>
-                <td className={RULE_VALUE}>
+                <th scope="row">Before</th>
+                <td>
                   {active.before.date} · {active.before.layer.id}
                 </td>
               </tr>
               <tr>
-                <th scope="row" className={RULE_LABEL}>After</th>
-                <td className={RULE_VALUE}>
+                <th scope="row">After</th>
+                <td>
                   {active.after.date} · {active.after.layer.id}
                 </td>
               </tr>
               <tr>
-                <th scope="row" className={RULE_LABEL}>Processing identity</th>
-                <td className={RULE_VALUE}>{processingIdentity(manifest)}</td>
+                <th scope="row">Processing identity</th>
+                <td>{processingIdentity(manifest)}</td>
               </tr>
               <tr>
-                <th scope="row" className={RULE_LABEL}>Resampled by the builder</th>
-                <td className={RULE_VALUE}>
+                <th scope="row">Resampled by the builder</th>
+                <td>
                   {active.resampled === null ? "not reported" : active.resampled ? "yes" : "no"}
                 </td>
               </tr>
               <tr>
-                <th scope="row" className={RULE_LABEL}>Acquisition IDs</th>
-                <td className={`${RULE_VALUE} break-all text-[10px] leading-[1.5]`}>
+                <th scope="row">Acquisition IDs</th>
+                <td className="break-all !text-[10px]">
                   {active.before.acquisition?.granule ?? active.before.layer.id}
                   <br />
                   {active.after.acquisition?.granule ?? active.after.layer.id}
                 </td>
               </tr>
               <tr>
-                <th scope="row" className={RULE_LABEL}>Polarizations with observations</th>
-                <td className={RULE_VALUE}>{availablePols.join(", ") || "none"}</td>
+                <th scope="row">Polarizations with observations</th>
+                <td>{availablePols.join(", ") || "none"}</td>
               </tr>
               <tr>
-                <th scope="row" className={RULE_LABEL}>Installed pair labels</th>
-                <td className={RULE_VALUE}>{pairs.map((item) => item.label).join(", ") || "none"}</td>
+                <th scope="row">Installed pair labels</th>
+                <td>{pairs.map((item) => item.label).join(", ") || "none"}</td>
               </tr>
             </tbody>
           </table>

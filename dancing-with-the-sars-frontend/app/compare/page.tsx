@@ -21,23 +21,23 @@ const CALENDAR_PAIR_ID = "calendar-selection";
 /*
  * The Diptych — REDESIGN_GUIDE §6 `/compare`.
  *
- * Vocabulary classes (`.plate`, `.plate__tag`, `.colophon`, `.field`,
- * `.footnote`) are owned by `app/redesign.css`. The utilities next to them only
- * restate the guide's fixed token values and this page's own layout on the same
- * element, so a vocabulary rule and its utility never stack.
+ * The catalogue vocabulary (`.plate*`, `.colophon`, `.field*`, `.footnote`) is
+ * owned by `app/redesign.css` (slice 07) and is used here by name only.
+ * Utilities add this page's own layout around it. That stylesheet loads after
+ * Tailwind, so a utility that must beat a vocabulary reset carries the `!` modifier.
  */
 const MONO = "font-[family-name:var(--font-mono)]";
 const DISPLAY = "font-[family-name:var(--font-display)]";
 /** Guide §4 label: 11px mono, 0.18em tracking, uppercase, ink-mute. */
 const LABEL = `${MONO} text-[11px] uppercase leading-[1.4] tracking-[0.18em] text-[color:var(--ink-mute)]`;
-const PLATE = "plate rounded-[var(--radius)] border border-[color:var(--hairline-strong)] bg-[color:var(--paper)]";
-const PLATE_TAG = `plate__tag ${MONO} border-b border-[color:var(--hairline)] px-3 py-2 text-[11px] uppercase leading-[1.4] tracking-[0.14em] text-[color:var(--ink)]`;
-/* Layout sits on an inner wrapper so the vocabulary element's own `display` cannot rearrange it. */
-const PLATE_TAG_ROW = "flex w-full flex-wrap items-baseline justify-between gap-x-4 gap-y-1";
-const COLOPHON = "colophon border-l-[3px] border-[color:var(--accent-graphic)] bg-[color:var(--colophon)] px-3 py-2.5 text-[13px] leading-[1.55] text-[color:var(--ink)]";
-const FOOTNOTE = `footnote ${MONO} text-[11px] leading-[1.55] text-[color:var(--ink-mute)]`;
-const FIELD_LABEL = `${MONO} text-[10px] uppercase tracking-[0.18em] text-[color:var(--ink-mute)]`;
-const FIELD_CONTROL = `${MONO} block w-full rounded-[var(--radius)] border border-[color:var(--hairline-strong)] bg-[color:var(--paper-2)] h-[38px] px-2.5 py-0 text-[13px] text-[color:var(--ink)] disabled:opacity-50`;
+const PLATE = "plate";
+const PLATE_TAG = "plate__tag";
+const PLATE_HEADER = "plate__header";
+const PLATE_META = "plate__meta";
+const COLOPHON = "colophon";
+const FOOTNOTE = "footnote";
+const FIELD_LABEL = "field__label";
+const FIELD_CONTROL = "field__input h-[38px]";
 const TEXT_LINK = `${MONO} text-[11px] uppercase tracking-[0.14em] text-[color:var(--accent)] underline underline-offset-2`;
 
 function Field({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
@@ -97,7 +97,7 @@ function DiptychCell({ tag, date, pol, installed, divided = false }: DiptychCell
       >
         {date || "—"}
       </p>
-      <p className={`${FOOTNOTE} mt-2`}>
+      <p className={`${FOOTNOTE} !mt-2`}>
         {!date
           ? "No date selected."
           : installed
@@ -222,7 +222,7 @@ export default function ComparePage() {
             <div className="min-w-0">
               <p className="font-semibold">The catalogue or site could not be loaded.</p>
               <p className="mt-1 [overflow-wrap:anywhere]">{error}</p>
-              <p className={`${FOOTNOTE} mt-1`}>
+              <p className={`${FOOTNOTE} !mt-1`}>
                 The viewer shows installed products; a live fetch requires an explicit request.
               </p>
             </div>
@@ -239,13 +239,11 @@ export default function ComparePage() {
         </div>
       ) : sites.length === 0 ? (
         <section className={`${PLATE} mx-auto my-12 max-w-[720px]`} aria-labelledby="compare-empty-title">
-          <p className={PLATE_TAG}>
-            <span className={PLATE_TAG_ROW}>
-              <span>Diptych</span>
-              <span className="text-[color:var(--ink-mute)]">0 installed sites</span>
-            </span>
-          </p>
-          <div className="space-y-4 p-5">
+          <header className={PLATE_HEADER}>
+            <p className={PLATE_TAG}>Diptych</p>
+            <p className={PLATE_META}>0 installed sites</p>
+          </header>
+          <div className="space-y-4">
             <h2 id="compare-empty-title" className={`${DISPLAY} text-[22px] font-extrabold leading-tight tracking-[-0.02em] text-[color:var(--ink)]`}>
               No installed products to compare
             </h2>
@@ -314,7 +312,7 @@ export default function ComparePage() {
                 </select>
               </Field>
             </div>
-            <p className={`${FOOTNOTE} mt-2`} aria-label="Exact observation dates">Available {pol} dates: {availableDates.join(" · ") || "none"}</p>
+            <p className={`${FOOTNOTE} !mt-2`} aria-label="Exact observation dates">Available {pol} dates: {availableDates.join(" · ") || "none"}</p>
           </div>
 
           {calendarError && (

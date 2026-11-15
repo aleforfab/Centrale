@@ -17,38 +17,38 @@ import type {
 /*
  * The Observation Plate — REDESIGN_GUIDE §6 `/`.
  *
- * Vocabulary classes (`.plate`, `.plate__tag`, `.plate__caption`, `.index-row`,
- * `.rule-table`, `.colophon`, `.field`, `.footnote`) are owned by
- * `app/redesign.css`. The utilities next to them only restate the guide's fixed
- * token values and this page's own layout on the same element, so a vocabulary
- * rule and its utility never stack — whichever loads last wins with the same value.
+ * The catalogue vocabulary (`.plate*`, `.index-row`, `.rule-table`, `.colophon`,
+ * `.field*`, `.footnote`) is owned by `app/redesign.css` (slice 07) and is used
+ * here by name only. Utilities add this page's own layout around it. That
+ * stylesheet loads after Tailwind, so a utility that must beat a vocabulary
+ * reset (a margin on `.footnote`, say) carries the `!` modifier.
  */
 const MONO = "font-[family-name:var(--font-mono)]";
 const DISPLAY = "font-[family-name:var(--font-display)]";
 /** Guide §4 label: 11px mono, 0.18em tracking, uppercase, ink-mute. */
 const LABEL = `${MONO} text-[11px] uppercase leading-[1.4] tracking-[0.18em] text-[color:var(--ink-mute)]`;
-const PLATE = "plate rounded-[var(--radius)] border border-[color:var(--hairline-strong)] bg-[color:var(--paper)]";
-const PLATE_TAG = `plate__tag ${MONO} border-b border-[color:var(--hairline)] px-3 py-2 text-[11px] uppercase leading-[1.4] tracking-[0.14em] text-[color:var(--ink)]`;
-const PLATE_TAG_ROW = "flex w-full flex-wrap items-baseline justify-between gap-x-4 gap-y-1";
-const PLATE_CAPTION = `plate__caption ${MONO} border-t border-[color:var(--hairline)] px-3 py-2 text-[11px] leading-[1.5] text-[color:var(--ink-mute)]`;
-const COLOPHON = "colophon border-l-[3px] border-[color:var(--accent-graphic)] bg-[color:var(--colophon)] px-3 py-2.5 text-[13px] leading-[1.55] text-[color:var(--ink)]";
-const FOOTNOTE = `footnote ${MONO} text-[11px] leading-[1.55] text-[color:var(--ink-mute)]`;
-/* Row separators and hover belong to `.index-row`; the list owns the horizontal inset. */
-const INDEX_ROW = "index-row py-2.5";
+const PLATE = "plate";
+const PLATE_TAG = "plate__tag";
+const PLATE_HEADER = "plate__header";
+const PLATE_META = "plate__meta";
+const PLATE_CAPTION = "plate__caption";
+const COLOPHON = "colophon";
+const FOOTNOTE = "footnote";
+/* Separators, hover and the `data-active` marker belong to `.index-row`. */
+const INDEX_ROW = "index-row";
 /*
  * Layout lives on an inner wrapper wherever a vocabulary element needs one, so
- * the element's own `display` (flex, grid or block — redesign.css decides) can
- * never rearrange the content. `col-span-full` only matters if the parent is a grid.
+ * the element's own `display` (redesign.css decides it) can never rearrange
+ * the content. `col-span-full` only matters if the parent is a grid.
  */
 const ROW = "col-span-full flex w-full min-w-0";
-const RULE_TABLE = "rule-table w-full border-collapse text-[12px]";
-const RULE_CELL = "border-t border-[color:var(--hairline)] py-1.5 align-baseline";
-const FIELD_LABEL = `${MONO} text-[10px] uppercase tracking-[0.18em] text-[color:var(--ink-mute)]`;
-const FIELD_CONTROL = `${MONO} block w-full rounded-[var(--radius)] border border-[color:var(--hairline-strong)] bg-[color:var(--paper-2)] h-[38px] px-2.5 py-0 text-[13px] text-[color:var(--ink)] disabled:opacity-50`;
-const CHIP = `tm-chip ${MONO} inline-flex items-center rounded-[var(--radius)] border border-[color:var(--hairline-strong)] px-1.5 py-0.5 text-[10px] uppercase leading-[1.4] tracking-[0.12em] text-[color:var(--ink-soft)]`;
+const RULE_TABLE = "rule-table";
+const FIELD_LABEL = "field__label";
+const FIELD_CONTROL = "field__input h-[38px]";
+const CHIP = "tm-chip uppercase";
 const TEXT_LINK = `${MONO} text-[11px] uppercase tracking-[0.14em] text-[color:var(--accent)] underline underline-offset-2`;
 /* Guide §3 on-imagery chip: the one dark exception (literal values, no token). */
-const IMAGERY_CHIP = `${MONO} rounded-[2px] border border-[rgba(245,243,236,0.22)] bg-[rgba(13,12,10,0.88)] text-[#F5F3EC]`;
+const IMAGERY_CHIP = `${MONO} rounded-[2px] border border-[rgba(245,243,236,0.24)] bg-[rgba(13,12,10,0.88)] text-[#F5F3EC]`;
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "An unexpected request error occurred.";
@@ -94,7 +94,7 @@ function kindLabel(kind: ProductLayer["kind"]): string {
 
 function Field({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
   return (
-    <div className="field flex min-w-[11rem] flex-col gap-1">
+    <div className="field min-w-[11rem]">
       <label htmlFor={id} className={FIELD_LABEL}>{label}</label>
       {children}
     </div>
@@ -106,7 +106,7 @@ function RailSection({ id, tag, meta, children }: { id: string; tag: string; met
     <section aria-labelledby={id} className="border-b border-[color:var(--hairline)] py-4 last:border-b-0">
       <div className="flex items-baseline justify-between gap-3 px-4">
         {/* The label styles sit on the inner span so a heading-level rule cannot restyle the tag. */}
-        <h2 id={id} className="tm-panel__title m-0"><span className={`block ${LABEL}`}>{tag}</span></h2>
+        <h2 id={id} className="tm-panel__title !m-0"><span className={`block ${LABEL}`}>{tag}</span></h2>
         {meta && <span className={`${MONO} text-[10px] uppercase tracking-[0.14em] text-[color:var(--ink-mute)]`}>{meta}</span>}
       </div>
       {children}
@@ -267,13 +267,11 @@ export default function Home() {
         </div>
       ) : sites.length === 0 ? (
         <section className={`${PLATE} mx-auto my-12 max-w-[720px]`} aria-labelledby="dashboard-empty-title">
-          <p className={PLATE_TAG}>
-            <span className={PLATE_TAG_ROW}>
-              <span>Catalogue</span>
-              <span className="text-[color:var(--ink-mute)]">0 installed sites</span>
-            </span>
-          </p>
-          <div className="space-y-4 p-5">
+          <header className={PLATE_HEADER}>
+            <p className={PLATE_TAG}>Catalogue</p>
+            <p className={PLATE_META}>0 installed sites</p>
+          </header>
+          <div className="space-y-4">
             <h2 id="dashboard-empty-title" className={`${DISPLAY} text-[22px] font-extrabold leading-tight tracking-[-0.02em] text-[color:var(--ink)]`}>
               No precomputed products yet
             </h2>
@@ -292,19 +290,19 @@ export default function Home() {
       ) : manifest ? (
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           <section className={`${PLATE} min-w-0 lg:[@media(min-height:640px)]:sticky lg:top-4`} aria-label="Installed NISAR product map">
-            <p className={PLATE_TAG}>
-              <span className={PLATE_TAG_ROW}>
-                <span>
-                  <span className="text-[color:var(--accent)]">FIG. 01</span>
+            <header className={PLATE_HEADER}>
+              <p className={PLATE_TAG}>
+                FIG. 01
+                <span className="text-[color:var(--ink)]">
                   {" — "}{manifest.site.title.toUpperCase()}
                   {layer
                     ? <>{" · "}{layer.pol ?? polarization}{" · "}{kindLabel(layer.kind)}{" · "}{activeWhen ?? "date not reported"}</>
                     : " · no layer selected"}
                 </span>
-                <span className="text-[color:var(--ink-mute)]">{manifest.source.maturity}</span>
-              </span>
-            </p>
-            <div className="relative h-[clamp(440px,66vh,760px)]">
+              </p>
+              <p className={PLATE_META}>{manifest.source.maturity}</p>
+            </header>
+            <div className="plate__body relative h-[clamp(440px,66vh,760px)]">
               <Map
                 bbox={manifest.site.bbox}
                 layers={visibleLayers}
@@ -331,7 +329,7 @@ export default function Home() {
           </section>
 
           <aside
-            className="min-w-0 rounded-[var(--radius)] border border-[color:var(--hairline)] bg-[color:var(--paper-2)]"
+            className="min-w-0 rounded-[var(--radius)] border border-[color:var(--hairline)] bg-[color:var(--paper)]"
             aria-label="Catalogue index for this site"
           >
             <RailSection id="rail-site" tag="Site">
@@ -360,7 +358,7 @@ export default function Home() {
                     const isActive = layer?.id === item.id;
                     const isVisible = visibleLayerIds.includes(item.id);
                     return (
-                      <li key={item.id} className={INDEX_ROW}>
+                      <li key={item.id} className={INDEX_ROW} data-active={isActive ? "true" : undefined}>
                         <div className={`${ROW} items-start gap-3`}>
                           <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5">
                             <input
@@ -397,7 +395,7 @@ export default function Home() {
                   })}
                 </ul>
                 {layer?.legend && (
-                  <p className={`${FOOTNOTE} mt-3 px-4`}>
+                  <p className={`${FOOTNOTE} !mt-3 px-4`}>
                     <span className="uppercase tracking-[0.14em] text-[color:var(--ink-soft)]">Legend</span>
                     {" — "}{layer.legend}
                   </p>
@@ -472,14 +470,15 @@ export default function Home() {
                         </caption>
                         <tbody>
                           {[
-                            ["Lower return", `${stats.decrease_km2.toFixed(2)} km² (${stats.decrease_pct.toFixed(1)}%)`],
-                            ["Higher return", `${stats.increase_km2.toFixed(2)} km² (${stats.increase_pct.toFixed(1)}%)`],
-                            ["Valid coverage", formatPercent(stats.valid_fraction_of_bbox)],
-                            ["Noise estimate σ", `${stats.sigma_db.toFixed(2)} dB`],
-                          ].map(([label, value]) => (
+                            ["Lower return", "", `${stats.decrease_km2.toFixed(2)} km² (${stats.decrease_pct.toFixed(1)}%)`],
+                            ["Higher return", "", `${stats.increase_km2.toFixed(2)} km² (${stats.increase_pct.toFixed(1)}%)`],
+                            ["Valid coverage", "", formatPercent(stats.valid_fraction_of_bbox)],
+                            ["Noise estimate", "σ", `${stats.sigma_db.toFixed(2)} dB`],
+                          ].map(([label, symbol, value]) => (
                             <tr key={label}>
-                              <th scope="row" className={`${RULE_CELL} pr-3 text-left font-normal text-[color:var(--ink-soft)]`}>{label}</th>
-                              <td className={`${RULE_CELL} ${MONO} text-right tabular-nums text-[color:var(--ink)]`}>{value}</td>
+                              {/* The row label is uppercased by `.rule-table th`; σ must stay lower case (Σ would read as a sum). */}
+                              <th scope="row">{label}{symbol && <> <span className="normal-case">{symbol}</span></>}</th>
+                              <td>{value}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -496,14 +495,14 @@ export default function Home() {
                           ))}
                         </div>
                       )}
-                      <p className={`${FOOTNOTE} mt-3`}>
+                      <p className={`${FOOTNOTE} !mt-3`}>
                         {stats.resampled ? "Post-event data were resampled to the pre-event grid." : "Acquisition grids were aligned."}
                         {" "}Backscatter change does not determine its cause. These are measured outputs, not a
                         validated scientific result.
                       </p>
                     </>
                   ) : (
-                    <p className={`${FOOTNOTE} mt-3`}>
+                    <p className={`${FOOTNOTE} !mt-3`}>
                       No pair product is active. Select a difference or change-mask layer under Layers to read its measured statistics.
                     </p>
                   )}

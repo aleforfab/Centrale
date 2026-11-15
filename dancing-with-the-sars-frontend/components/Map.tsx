@@ -49,7 +49,7 @@ const SITE_FOOTPRINT_WIDTH = 2;
  * The page owns the `.plate` frame; this component draws no border of its own.
  */
 const CHIP =
-  "rounded-[2px] border border-[rgba(245,243,236,0.22)] bg-[rgba(13,12,10,0.88)] font-[family-name:var(--font-mono)] text-[#F5F3EC]";
+  "rounded-[2px] border border-[rgba(245,243,236,0.24)] bg-[rgba(13,12,10,0.88)] font-[family-name:var(--font-mono)] text-[#F5F3EC]";
 const CHIP_FOCUS =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF8A3D]";
 /* Mapbox's own controls, squared off and de-shadowed to sit in the same system. */
