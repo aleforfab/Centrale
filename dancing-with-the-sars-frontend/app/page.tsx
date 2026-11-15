@@ -245,7 +245,6 @@ export default function Home() {
             {manifest?.polarizations.map((item) => <option key={item.pol} value={item.pol}>{item.pol}</option>)}
           </select>
         </Field>
-        <p className={`${FOOTNOTE} sm:ml-auto sm:text-right`}>Installed dated radar products and their provenance.</p>
       </div>
 
       {manifest && <div className="mb-4 text-[13px] leading-5" role="status">
@@ -308,7 +307,6 @@ export default function Home() {
                     : " · no layer selected"}
                 </span>
               </p>
-              <p className={PLATE_RIGHT_TAG}>{manifest.source.maturity}</p>
             </header>
             <div className="relative h-[clamp(440px,66vh,760px)]">
               <Map
@@ -346,7 +344,7 @@ export default function Home() {
                 </h3>
                 <p className="mt-2 text-[13px] leading-[1.55] text-[color:var(--ink-soft)]">{withoutRemovedDisclaimer(manifest.site.description)}</p>
                 <div className="tm-chip-row mt-3 flex flex-wrap gap-1.5">
-                  {[manifest.source.mission, `${manifest.source.band}-band`, manifest.source.product, manifest.source.maturity, `CRID ${manifest.source.crid}`].map((tag) => (
+                  {[manifest.source.mission, `${manifest.source.band}-band`, manifest.source.product, `CRID ${manifest.source.crid}`].map((tag) => (
                     <span key={tag} className={CHIP}>{tag}</span>
                   ))}
                 </div>
