@@ -49,11 +49,7 @@ class Config:
     DEFAULT_SMOOTHING_PX: int = 3
     DEFAULT_THRESHOLDS_DB: ClassVar[list[float]] = [2.0, 3.0, 6.0]
     DEFAULT_THRESHOLD_DB: float = 3.0
-    
-    # Known instrument data gap
-    DATA_GAP_START: str = "2026-07-27T22:03:25Z"
-    DATA_GAP_END: str = "2026-08-10T00:55:27Z"
-    
+
     @classmethod
     def get_products_dir(cls) -> Path:
         """Get and ensure products directory exists."""

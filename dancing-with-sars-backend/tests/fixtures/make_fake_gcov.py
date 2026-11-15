@@ -38,6 +38,8 @@ def create_fake_gcov(
     gamma_to_sigma: float | np.ndarray | None = 1.0,
     base_db_value: float | None = None,
     nan_fraction: float = 0.05,
+    origin_easting_m: float = 0.0,
+    origin_northing_m: float = 0.0,
 ) -> Path:
     """
     Create a fake NISAR GCOV HDF5 file.
@@ -54,6 +56,8 @@ def create_fake_gcov(
         gamma_to_sigma: Scalar float, 2D (size x size) array, or None (omit dataset)
         base_db_value: Optional constant background dB value (instead of random uniform)
         nan_fraction: Fraction of pixels to set to NaN
+        origin_easting_m: Projected X (easting) origin in meters (default 0.0)
+        origin_northing_m: Projected Y (northing) origin in meters (default 0.0)
     
     Returns:
         Path to the created file
@@ -65,10 +69,9 @@ def create_fake_gcov(
     # Generate base data with random noise
     rng = np.random.default_rng(seed)
     
-    # Create coordinate arrays (meters from origin)
-    # Assuming origin at (0, 0) for simplicity
-    x_coords = np.linspace(0, size * pixel_spacing_m, size, dtype=np.float64)
-    y_coords = np.linspace(0, size * pixel_spacing_m, size, dtype=np.float64)
+    # Create coordinate arrays (meters from projected origin)
+    x_coords = origin_easting_m + np.linspace(0, size * pixel_spacing_m, size, dtype=np.float64)
+    y_coords = origin_northing_m + np.linspace(0, size * pixel_spacing_m, size, dtype=np.float64)
     
     # Create projection information
     # In real files, this would be a structured dataset with CRS info
@@ -195,6 +198,8 @@ def create_fake_gcov_pair(
     cycle: int = 4,
     gamma_to_sigma_1: float | np.ndarray | None = 1.0,
     gamma_to_sigma_2: float | np.ndarray | None = 1.0,
+    origin_easting_m: float = 0.0,
+    origin_northing_m: float = 0.0,
 ) -> tuple[Path, Path]:
     """
     Create a pair of fake GCOV files for before/after comparison testing.
@@ -243,6 +248,8 @@ def create_fake_gcov_pair(
         pol_codes=pol_codes,
         seed=42,
         gamma_to_sigma=gamma_to_sigma_1,
+        origin_easting_m=origin_easting_m,
+        origin_northing_m=origin_northing_m,
     )
     
     # Create second granule (after) with change region
@@ -264,6 +271,8 @@ def create_fake_gcov_pair(
         change_region=change_region,
         change_amount_db=change_amount_db,
         gamma_to_sigma=gamma_to_sigma_2,
+        origin_easting_m=origin_easting_m,
+        origin_northing_m=origin_northing_m,
     )
     
     return path1, path2

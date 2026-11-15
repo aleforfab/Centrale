@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
-import ee
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -25,14 +24,6 @@ from schemas import (
     TimeSeriesRequest,
 )
 from services.asf_service import search_asf_granules
-from services.gee_service import (
-    compute_change_tiles,
-    compute_observation_comparison_tile,
-    compute_observation_tile,
-    compute_threshold_mask_tile,
-    compute_zonal_timeseries,
-    initialize_gee,
-)
 
 logger = logging.getLogger(__name__)
 gee_ready = False
@@ -43,6 +34,8 @@ async def lifespan(app: FastAPI):
     global gee_ready
     if Config.ENABLE_SENTINEL1_FALLBACK:
         try:
+            from services.gee_service import initialize_gee
+
             initialize_gee()
             gee_ready = True
         except Exception:
@@ -66,7 +59,7 @@ app.add_middleware(
         if origin.strip()
     ],
     allow_credentials=False,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 app.include_router(sites_router)
@@ -141,6 +134,19 @@ def data_status():
     }
 
 
+def _call_gee_fallback(fn_name: str, /, **kwargs):
+    """Lazily import Earth Engine and invoke a Sentinel-1 fallback helper."""
+    import ee
+
+    from services import gee_service
+
+    fn = getattr(gee_service, fn_name)
+    try:
+        return _fallback_response(fn(**kwargs))
+    except (ee.EEException, OSError, RuntimeError, TypeError, ValueError) as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @app.post("/api/gee/change-detection")
 def run_change_detection(req: ChangeDetectionRequest):
     _fallback_only()
@@ -149,19 +155,17 @@ def run_change_detection(req: ChangeDetectionRequest):
             status_code=503,
             detail="Earth Engine is not configured. Add valid credentials before running analysis.",
         )
-    try:
-        return _fallback_response(compute_change_tiles(
-            bbox=req.bbox,
-            pre_start=req.pre_start.isoformat(),
-            pre_end=req.pre_end.isoformat(),
-            post_start=req.post_start.isoformat(),
-            post_end=req.post_end.isoformat(),
-            polarization=req.polarization,
-            threshold_db=req.threshold_db,
-            orbit_pass=req.orbit_pass
-        ))
-    except (ee.EEException, OSError, RuntimeError, TypeError, ValueError) as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    return _call_gee_fallback(
+        "compute_change_tiles",
+        bbox=req.bbox,
+        pre_start=req.pre_start.isoformat(),
+        pre_end=req.pre_end.isoformat(),
+        post_start=req.post_start.isoformat(),
+        post_end=req.post_end.isoformat(),
+        polarization=req.polarization,
+        threshold_db=req.threshold_db,
+        orbit_pass=req.orbit_pass,
+    )
 
 
 @app.post("/api/gee/change-mask")
@@ -172,19 +176,17 @@ def update_change_mask(req: ChangeDetectionRequest):
             status_code=503,
             detail="Earth Engine is not configured. Add valid credentials before updating the threshold mask.",
         )
-    try:
-        return _fallback_response(compute_threshold_mask_tile(
-            bbox=req.bbox,
-            pre_start=req.pre_start.isoformat(),
-            pre_end=req.pre_end.isoformat(),
-            post_start=req.post_start.isoformat(),
-            post_end=req.post_end.isoformat(),
-            polarization=req.polarization,
-            threshold_db=req.threshold_db,
-            orbit_pass=req.orbit_pass,
-        ))
-    except (ee.EEException, OSError, RuntimeError, TypeError, ValueError) as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    return _call_gee_fallback(
+        "compute_threshold_mask_tile",
+        bbox=req.bbox,
+        pre_start=req.pre_start.isoformat(),
+        pre_end=req.pre_end.isoformat(),
+        post_start=req.post_start.isoformat(),
+        post_end=req.post_end.isoformat(),
+        polarization=req.polarization,
+        threshold_db=req.threshold_db,
+        orbit_pass=req.orbit_pass,
+    )
 
 
 @app.post("/api/gee/timeseries")
@@ -195,16 +197,14 @@ def get_timeseries(req: TimeSeriesRequest):
             status_code=503,
             detail="Earth Engine is not configured. Add valid credentials before loading the time series.",
         )
-    try:
-        return _fallback_response(compute_zonal_timeseries(
-            bbox=req.bbox,
-            start_date=req.start_date.isoformat(),
-            end_date=req.end_date.isoformat(),
-            polarization=req.polarization,
-            orbit_pass=req.orbit_pass
-        ))
-    except (ee.EEException, OSError, RuntimeError, TypeError, ValueError) as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    return _call_gee_fallback(
+        "compute_zonal_timeseries",
+        bbox=req.bbox,
+        start_date=req.start_date.isoformat(),
+        end_date=req.end_date.isoformat(),
+        polarization=req.polarization,
+        orbit_pass=req.orbit_pass,
+    )
 
 
 @app.post("/api/gee/observation-tile")
@@ -215,15 +215,13 @@ def get_observation_tile(req: ObservationTileRequest):
             status_code=503,
             detail="Earth Engine is not configured. Add valid credentials before loading radar imagery.",
         )
-    try:
-        return _fallback_response(compute_observation_tile(
-            bbox=req.bbox,
-            observation_date=req.date.isoformat(),
-            polarization=req.polarization,
-            orbit_pass=req.orbit_pass,
-        ))
-    except (ee.EEException, OSError, RuntimeError, TypeError, ValueError) as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    return _call_gee_fallback(
+        "compute_observation_tile",
+        bbox=req.bbox,
+        observation_date=req.date.isoformat(),
+        polarization=req.polarization,
+        orbit_pass=req.orbit_pass,
+    )
 
 
 @app.post("/api/gee/observation-comparison")
@@ -234,16 +232,14 @@ def get_observation_comparison(req: ObservationComparisonRequest):
             status_code=503,
             detail="Earth Engine is not configured. Add valid credentials before comparing radar observations.",
         )
-    try:
-        return _fallback_response(compute_observation_comparison_tile(
-            bbox=req.bbox,
-            start_date=req.start_date.isoformat(),
-            end_date=req.end_date.isoformat(),
-            polarization=req.polarization,
-            orbit_pass=req.orbit_pass,
-        ))
-    except (ee.EEException, OSError, RuntimeError, TypeError, ValueError) as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    return _call_gee_fallback(
+        "compute_observation_comparison_tile",
+        bbox=req.bbox,
+        start_date=req.start_date.isoformat(),
+        end_date=req.end_date.isoformat(),
+        polarization=req.polarization,
+        orbit_pass=req.orbit_pass,
+    )
 
 
 @app.post("/api/asf/search")
