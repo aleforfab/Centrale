@@ -16,7 +16,7 @@ the source for installed dates and layers.
 - `dancing-with-sars-backend/` — FastAPI backend: NISAR GCOV catalog,
   live fetch (`/api/nisar/fetch`), installed-product builder, CLI
   (`python -m nisar.cli`), optional Sentinel-1 Earth Engine fallback (off by default).
-- `agent-team/` — team contract, briefs (`briefs/`), worker reports (`reports/`).
+- `skills/` — this agent skill: repo map, gates, landmines.
 - `docs/` — audits, deployment runbooks, verification ledgers.
 - Deployed: VM behind Caddy at https://dancing-sars.duckdns.org/ (Oracle Cloud).
   Localhost cannot validate the Mapbox token (URL-restricted) — browser-level
@@ -49,8 +49,8 @@ pixel result unless you actually loaded the deployed page.
 
 ## Working protocol
 
-- Read `agent-team/CONTRACT.md` and your brief before writing code. Your lane
-  ownership is exclusive; sibling workers have parallel lanes.
+- Read `CONTRIBUTING.md` before writing code. Keep one concern per branch;
+  short branches merged fast.
 - Branch from `origin/main`. Never push to `main`, never push to `arena/*`,
   never merge your own PR. Force-push only with `--force-with-lease` on your
   own branch.

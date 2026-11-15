@@ -80,5 +80,5 @@ not approved yet. Browser tests: local servers + (on VM) real browser.
   the **real Anak Krakatau download (~24 GB) runs only on the VM**; this sandbox
   verifies everything with clearly labelled synthetic fixtures / mocked live fetch.
 - NISAR Provisional GCOV is what exists over the AOI for Aug–Sep 2026
-  (see `agent-team/PLAN.md` §Real-granule inventory). Validated `NISAR_L2_GCOV_V1`
+  (see `docs/ANAK_KRAKATAU_VM_BUILD.md`). Validated `NISAR_L2_GCOV_V1`
   shows only a 2026-10-24 granule over the AOI so far; `NISAR_L2_GCOV_BETA_V1`: none.

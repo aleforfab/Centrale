@@ -11,9 +11,9 @@ between acquisitions of the same stack, and presents them with their provenance.
 **What this is not:** a flood detector, a damage assessment, a displacement
 measurement, or a validated scientific result. Backscatter change is a measured
 difference; it does not identify a cause. No real NISAR case has been processed
-yet. Read [`MIGRATION_STATUS.md`](MIGRATION_STATUS.md) for the current state; the implementation ledger and verification record live in
-[`docs/IMPLEMENTATION_VERIFICATION.md`](docs/IMPLEMENTATION_VERIFICATION.md), and
-phase history in [`HACKATHON.md`](HACKATHON.md) and [`agent-team/PLAN.md`](agent-team/PLAN.md).
+yet. The verification record — what was executed, what was not — lives in
+[`docs/IMPLEMENTATION_VERIFICATION.md`](docs/IMPLEMENTATION_VERIFICATION.md);
+current build state and open gates are in [`HACKATHON.md`](HACKATHON.md).
 
 ## Interfaces
 
@@ -27,9 +27,10 @@ phase history in [`HACKATHON.md`](HACKATHON.md) and [`agent-team/PLAN.md`](agent
 
 Supporting material:
 
-- `docs/IMPLEMENTATION_HANDOFF.md` — what exists, how it was produced, what is missing.
 - `docs/IMPLEMENTATION_VERIFICATION.md` — executed test results and unverified claims.
-- `docs/` backend runbook — site preparation, build, verification, local startup.
+- `docs/ANAK_KRAKATAU_VM_BUILD.md` — the real-site build runbook (written, not executed).
+- `docs/REDESIGN_GUIDE.md` — the design system the frontend CSS is written against.
+- `dancing-with-sars-backend/docs/` — LIVE_FETCH, NORMALIZATION, INSAR, DEMO_RUNBOOK.
 - `learning-guide/` — beginner course (Markdown source and PDF builder).
 
 ## Architecture

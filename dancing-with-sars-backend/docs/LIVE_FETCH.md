@@ -154,7 +154,7 @@ completion.
   share one track/frame/direction/maturity. If not, the job fails with a clear
   error instead of producing a misleading change map.
 - Same-stack grid alignment and mask semantics remain unverified against live
-  data (see `docs/nisar_file_layout.md` and `TODO.md` T1.4).
+  data (see `docs/nisar_file_layout.md`).
 - `products/`, `.cache/` and the job JSON files are gitignored; they are
   runtime state, not source. Remove those directories (or use `refresh: true`)
   to clear the cache.

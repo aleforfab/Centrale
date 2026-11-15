@@ -72,7 +72,7 @@ Work in your lane. Crossing lanes is what creates conflicts.
 | Dashboard UI | `dancing-with-the-sars-frontend/app/page.tsx`, `components/Map.tsx`, `DanceChart.tsx`, `ControlPanel.tsx`, `TimeScrubber.tsx`, `AsfGranules.tsx` |
 | Content pages | `app/applications/`, `app/compare/`, `app/setup/`, `lib/applications.ts`, `lib/comparison.ts`, `components/ComparisonViewer.tsx`, `public/resources/` |
 | Cloud and deployment | `GCP_CHECKLIST.md`, `DEPLOYMENT_VM.md`, service units and Caddy config (kept outside the repo) |
-| Docs and course | `README.md`, `docs/`, `learning-guide/`, `MIGRATION_STATUS.md` |
+| Docs and course | `README.md`, `docs/`, `learning-guide/`, `skills/` |
 
 ### Shared files — announce first
 
