@@ -453,3 +453,38 @@ def test_live_fetch_request_rejects_unknown_polarization():
             end_date=END,
             polarizations=["XX"],
         )
+
+
+class TestEnforceSizeLimit:
+    """ASF reports NISAR granule sizes per file, not as a scalar."""
+
+    def test_sums_hdf5_entries_only(self):
+        product = SimpleNamespace(
+            properties={
+                "bytes": {
+                    "granule_001.h5": {"bytes": 100, "format": "HDF5"},
+                    "granule_001_LATLON.png": {"bytes": 7, "format": "PNG"},
+                    "granule_001_NATIVE.png": {"bytes": 9, "format": "PNG"},
+                }
+            }
+        )
+        assert live_fetch._enforce_size_limit([(product,)], 1000) == 100
+
+    def test_scalar_size_still_supported(self):
+        product = SimpleNamespace(properties={"bytes": "250"})
+        assert live_fetch._enforce_size_limit([(product,)], 1000) == 250
+
+    def test_missing_size_is_refused(self):
+        product = SimpleNamespace(properties={})
+        with pytest.raises(live_fetch.LiveFetchError):
+            live_fetch._enforce_size_limit([(product,)], 1000)
+
+    def test_dict_without_hdf5_entry_is_refused(self):
+        product = SimpleNamespace(properties={"bytes": {"browse.png": {"bytes": 9}}})
+        with pytest.raises(live_fetch.LiveFetchError):
+            live_fetch._enforce_size_limit([(product,)], 1000)
+
+    def test_oversize_total_is_refused(self):
+        product = SimpleNamespace(properties={"bytes": {"granule_001.h5": {"bytes": 5000}}})
+        with pytest.raises(live_fetch.LiveFetchError):
+            live_fetch._enforce_size_limit([(product,)], 1000)
