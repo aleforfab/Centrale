@@ -66,8 +66,15 @@ def _date_key(value: str) -> str:
     return normalized
 
 
-def _iso_date(date_key: str) -> str:
-    return f"{date_key[:4]}-{date_key[4:6]}-{date_key[6:8]}"
+def _iso_date(date_key: str, *, end_of_day: bool = False) -> str:
+    """Return an ISO timestamp for an ASF query boundary.
+
+    ASF reads a date-only ``end`` as midnight at the *start* of that day, which
+    silently excludes a granule acquired later the same day -- including the last
+    acquisition of a stack. The upper bound therefore needs an end-of-day stamp.
+    """
+    stamp = f"{date_key[:4]}-{date_key[4:6]}-{date_key[6:8]}"
+    return f"{stamp}T23:59:59Z" if end_of_day else f"{stamp}T00:00:00Z"
 
 
 def _load_config(path: Path) -> tuple[SiteConfig, StackConfig, TileConfig]:
@@ -153,7 +160,7 @@ def _remote_granules(
         dataMaturity=stack.maturity,
         intersectsWith=bbox_to_wkt(config.bbox),
         start=_iso_date(start),
-        end=_iso_date(end),
+        end=_iso_date(end, end_of_day=True),
         maxResults=Config.MAX_RESULTS,
         session=session,
     )
