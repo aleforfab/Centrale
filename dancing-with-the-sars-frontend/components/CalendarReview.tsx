@@ -6,6 +6,13 @@ import { ComparisonViewer } from "@/components/ComparisonViewer";
 import { findObservation, normalizeDate, observationDates, observationPolarizations } from "@/lib/comparison";
 import type { SiteManifest } from "@/lib/types";
 
+/** Filter only exact installed dates; invalid endpoints do not select a range. */
+export function calendarDatesInRange(dates: string[], start: string, end: string): string[] {
+  return dates.includes(start) && dates.includes(end) && start <= end
+    ? dates.filter((date) => date >= start && date <= end)
+    : [];
+}
+
 /** A calendar range never fabricates intermediate observations. */
 export function CalendarReview({ manifest }: { manifest: SiteManifest }) {
   const pols = useMemo(() => observationPolarizations(manifest), [manifest]);
@@ -23,7 +30,7 @@ export function CalendarReview({ manifest }: { manifest: SiteManifest }) {
     setIndex(0); setPlaying(false);
   }, [dates]);
   const valid = dates.includes(start) && dates.includes(end) && start <= end;
-  const selectedDates = useMemo(() => valid ? dates.filter((date) => date >= start && date <= end) : [], [dates, start, end, valid]);
+  const selectedDates = useMemo(() => calendarDatesInRange(dates, start, end), [dates, start, end, valid]);
   const frames = useMemo(() => selectedDates.map((date) => findObservation(manifest, pol, date)).filter((layer): layer is NonNullable<typeof layer> => layer !== null), [selectedDates, manifest, pol]);
   useEffect(() => { setIndex(0); setPlaying(false); }, [start, end, pol]);
   useEffect(() => {
