@@ -32,6 +32,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import asf_search as asf
+from shapely.geometry import box as shapely_box
 from shapely.geometry import shape
 
 DEFAULT_BBOX = "-36.3523,-8.3349,-33.6252,-5.5448"
@@ -170,12 +171,24 @@ def main() -> int:
     else:
         cx, cy = (minx + maxx) / 2, (miny + maxy) / 2
     half = args.box_deg / 2
-    bbox = [
-        round(max(minx, cx - half), 4),
-        round(max(miny, cy - half), 4),
-        round(min(maxx, cx + half), 4),
-        round(min(maxy, cy + half), 4),
-    ]
+    box_polygon = None
+    for _ in range(12):
+        bbox = [round(cx - half, 4), round(cy - half, 4),
+                round(cx + half, 4), round(cy + half, 4)]
+        box_polygon = shapely_box(*bbox)
+        if overlap.contains(box_polygon):
+            break
+        half /= 2
+    else:
+        print(
+            f"the analysis box around ({cx}, {cy}) is not inside the {len(chosen)}-granule "
+            f"footprint overlap; move --center-lon/--center-lat towards the middle of "
+            f"{[round(v, 3) for v in (minx, miny, maxx, maxy)]}",
+            file=sys.stderr,
+        )
+        return 1
+    if half * 2 < args.box_deg:
+        print(f"note: shrank the box to {half * 2:.4f} deg to stay inside the swath")
 
     pairs = []
     for index in range(len(dates) - 1):
@@ -235,6 +248,7 @@ tiles:
     print(f"download   : {total_bytes / 1024 ** 3:.2f} GiB")
     print(f"disk free  : {free / 1024 ** 3:.1f} GiB")
     print(f"overlap    : {[round(v, 4) for v in (minx, miny, maxx, maxy)]}")
+    print(f"containment: box is fully inside the {len(chosen)}-granule overlap")
     print(f"bbox       : {bbox}")
     print(f"wrote      : {out}")
     print()
