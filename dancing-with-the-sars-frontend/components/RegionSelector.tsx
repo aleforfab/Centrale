@@ -258,8 +258,8 @@ export function RegionSelector({ initialBbox = DEFAULT_BBOX, onChange }: RegionS
   };
 
   return (
-    <section className="tm-panel">
-      <h2 className="tm-panel__title">1 · Select a region</h2>
+    <section className="plate tm-panel">
+      <h2 className="plate__tag tm-panel__title">1 · Select a region</h2>
       <div className="tm-map">
         <div ref={containerRef} className="tm-map__canvas" aria-label="Mapbox region selector" />
         <div className="tm-map__grid" aria-hidden="true" />
@@ -278,13 +278,13 @@ export function RegionSelector({ initialBbox = DEFAULT_BBOX, onChange }: RegionS
           <span>N {bbox[3].toFixed(3)}</span>
         </div>
       ) : (
-        <p className="tm-muted">No region selected. Draw a box, use the current view, or enter coordinates.</p>
+        <p className="footnote tm-muted mt-3">No region selected. Draw a box, use the current view, or enter coordinates.</p>
       )}
 
       <div className="tm-actions">
         <button
           type="button"
-          className="tm-button"
+          className="chapter-button tm-button"
           aria-pressed={drawMode}
           onClick={() => setDrawMode(true)}
         >
@@ -292,42 +292,42 @@ export function RegionSelector({ initialBbox = DEFAULT_BBOX, onChange }: RegionS
         </button>
         <button
           type="button"
-          className="tm-button tm-button--ghost"
+          className="chapter-button chapter-button--ghost tm-button tm-button--ghost"
           aria-pressed={!drawMode}
           onClick={() => setDrawMode(false)}
         >
           Pan map
         </button>
-        <button type="button" className="tm-button" onClick={useCurrentView} disabled={!ready}>
+        <button type="button" className="chapter-button tm-button" onClick={useCurrentView} disabled={!ready}>
           Use current view
         </button>
-        <button type="button" className="tm-button tm-button--ghost" onClick={() => applyBboxRef.current(null)}>
+        <button type="button" className="chapter-button chapter-button--ghost tm-button tm-button--ghost" onClick={() => applyBboxRef.current(null)}>
           Clear
         </button>
       </div>
 
-      <label className="tm-muted" style={{ display: "grid", gap: 6, marginTop: 12 }}>
+      <label className="field tm-muted mt-3">
         Manual bbox
         <input
           value={manualText}
           onChange={(event) => setManualText(event.target.value)}
           placeholder="west, south, east, north"
-          className="tm-controls__input"
+          className="field__input tm-controls__input"
           aria-label="Manual bounding box"
         />
       </label>
       <div className="tm-actions">
-        <button type="button" className="tm-button" onClick={applyManual}>
+        <button type="button" className="chapter-button tm-button" onClick={applyManual}>
           Apply coordinates
         </button>
       </div>
 
       {error && (
-        <p className="tm-problem" role="alert" style={{ marginTop: 12 }}>
+        <p className="colophon tm-problem mt-3" role="alert">
           {error}
         </p>
       )}
-      <p className="tm-muted" style={{ marginTop: 10 }}>
+      <p className="footnote tm-muted mt-3">
         The Mapbox GL canvas provides the region geometry. This prototype uses procedural frames, so the selected
         bbox changes the query and viewport, not real satellite measurements.
         {usingFallback && " A local dark grid stands in for the basemap because no URL-restricted Mapbox token is configured in this preview."}

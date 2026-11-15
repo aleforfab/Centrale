@@ -77,37 +77,37 @@ export function LiveScanPanel({ idPrefix, defaultBbox = DEFAULT_BBOX, onBuilt, c
   };
   const percent = typeof job?.progress === "number" ? Math.max(0, Math.min(100, job.progress)) : null;
   return <div className={compact ? "space-y-3" : "space-y-4"}>
-    <section className="rounded-lg border border-slate-700 bg-[#111a24] p-4">
-      <h2 className="text-base font-semibold">Select a region</h2>
-      <p className="mt-1 text-sm text-slate-400">Draw or enter a bounding box. The default surrounds Anak Krakatau.</p>
+    <section className="plate">
+      <h2 className="plate__tag">Select a region</h2>
+      <p className="footnote mt-1">Draw or enter a bounding box. The default surrounds Anak Krakatau.</p>
       <div className="mt-3"><RegionSelector initialBbox={defaultBbox} onChange={(value) => { setBbox(value); onBboxChange?.(value); }} /></div>
-      <p className="mt-2 text-xs text-slate-400">Selected bbox: <code>{bbox ? formatBbox(bbox) : "not selected"}</code></p>
+      <p className="plate__caption">Selected bbox: <code>{bbox ? formatBbox(bbox) : "not selected"}</code></p>
     </section>
-    <section className="rounded-lg border border-slate-700 bg-[#111a24] p-4">
-      <h2 className="text-base font-semibold">Live scan window</h2>
+    <section className="plate">
+      <h2 className="plate__tag">Live scan window</h2>
       <div className="tm-calendar__row mt-3">
-        <label className="tm-calendar__label" htmlFor={`${idPrefix}-start`}>Start date<input id={`${idPrefix}-start`} type="date" required value={start} onChange={(e) => setStart(e.target.value)} /></label>
-        <label className="tm-calendar__label" htmlFor={`${idPrefix}-end`}>End date<input id={`${idPrefix}-end`} type="date" required value={end} onChange={(e) => setEnd(e.target.value)} /></label>
+        <label className="field tm-calendar__label" htmlFor={`${idPrefix}-start`}>Start date<input id={`${idPrefix}-start`} type="date" required value={start} onChange={(e) => setStart(e.target.value)} /></label>
+        <label className="field tm-calendar__label" htmlFor={`${idPrefix}-end`}>End date<input id={`${idPrefix}-end`} type="date" required value={end} onChange={(e) => setEnd(e.target.value)} /></label>
       </div>
-      {dateError && <p className="mt-2 text-xs text-amber-200" role="alert">{dateError}</p>}
-      <p className="mt-3 text-xs leading-5 text-slate-400">Selected window: {start || "missing"} to {end || "missing"} · HH + HV · PROVISIONAL · ASF / NASA Earthdata. The backend size limit may cap the request; a smaller region or window may be needed.</p>
-      <p className="mt-2 text-xs leading-5 text-amber-100">Live fetch downloads from ASF/Earthdata on the operator side and may require multiple GB of data and substantial processing time. Size is an estimate; actual download depends on the returned granules. Nothing runs until you request it.</p>
-      <button className="tm-button tm-button--primary mt-4" type="button" onClick={begin} disabled={busy || !!dateError || !isValidBbox(bbox) || status?.live_fetch_enabled === false}>{busy && !job ? "Checking and submitting…" : "Fetch real observations"}</button>
-      {availabilityError && <p className="mt-2 text-xs text-amber-200">Backend status: {availabilityError}</p>}
-      {status?.live_fetch_enabled === false && <p className="mt-2 text-xs text-amber-200">Live fetch is disabled on this backend. No request was submitted.</p>}
+      {dateError && <p className="colophon mt-2" role="alert">{dateError}</p>}
+      <p className="footnote mt-3">Selected window: {start || "missing"} to {end || "missing"} · HH + HV · PROVISIONAL · ASF / NASA Earthdata. The backend size limit may cap the request; a smaller region or window may be needed.</p>
+      <p className="colophon mt-3">Live fetch downloads from ASF/Earthdata on the operator side and may require multiple GB of data and substantial processing time. Size is an estimate; actual download depends on the returned granules. Nothing runs until you request it.</p>
+      <button className="chapter-button chapter-button--primary tm-button tm-button--primary mt-4" type="button" onClick={begin} disabled={busy || !!dateError || !isValidBbox(bbox) || status?.live_fetch_enabled === false}>{busy && !job ? "Checking and submitting…" : "Fetch real observations"}</button>
+      {availabilityError && <p className="colophon mt-2">Backend status: {availabilityError}</p>}
+      {status?.live_fetch_enabled === false && <p className="colophon mt-2">Live fetch is disabled on this backend. No request was submitted.</p>}
     </section>
-    <section className="rounded-lg border border-slate-700 bg-[#111a24] p-4" aria-live="polite">
-      <h2 className="text-base font-semibold">Scan status · {labels[state]}</h2>
-      {(state === "queued" || state === "running") && <div className="mt-3 space-y-2"><p className="text-sm text-slate-300">{job?.message || "Submitting the scan request…"}{job?.stage ? ` · ${job.stage}` : ""}</p>{percent !== null && <div><div className="mb-1 flex justify-between text-xs text-slate-400"><span>Backend-reported progress</span><span>{percent}%</span></div><progress className="w-full" max={100} value={percent}>{percent}%</progress></div>}<button className="tm-button tm-button--ghost" type="button" onClick={cancel} disabled={!job?.job_id}>Cancel fetch</button></div>}
-      {state === "cancelled" && <p className="mt-2 text-sm text-slate-300">The job was cancelled.</p>}
-      {error && <p className="mt-3 text-sm text-amber-200" role="alert">{error}</p>}
-      {state === "credential-error" && <p className="mt-2 text-xs text-slate-400">Credential guidance is in <code>docs/LIVE_FETCH.md</code>. This UI does not collect or expose credentials.</p>}
-      {state === "size-limit" && <p className="mt-2 text-xs text-slate-400">Reduce the selected region or window, or ask the backend operator to review configured limits. No result is presented as complete.</p>}
+    <section className="plate" aria-live="polite">
+      <h2 className="plate__tag">Scan status · {labels[state]}</h2>
+      {(state === "queued" || state === "running") && <div className="mt-3 space-y-2"><p className="footnote">{job?.message || "Submitting the scan request…"}{job?.stage ? ` · ${job.stage}` : ""}</p>{percent !== null && <div><div className="footnote mb-1 flex justify-between"><span>Backend-reported progress</span><span>{percent}%</span></div><progress className="tm-scan-progress w-full" max={100} value={percent}>{percent}%</progress></div>}<button className="chapter-button chapter-button--ghost tm-button tm-button--ghost" type="button" onClick={cancel} disabled={!job?.job_id}>Cancel fetch</button></div>}
+      {state === "cancelled" && <p className="footnote mt-2">The job was cancelled.</p>}
+      {error && <p className="colophon mt-3" role="alert">{error}</p>}
+      {state === "credential-error" && <p className="footnote mt-2">Credential guidance is in <code>docs/LIVE_FETCH.md</code>. This UI does not collect or expose credentials.</p>}
+      {state === "size-limit" && <p className="footnote mt-2">Reduce the selected region or window, or ask the backend operator to review configured limits. No result is presented as complete.</p>}
     </section>
   </div>;
 }
 
 export function BuiltProductsBanner({ manifest }: { manifest: import("@/lib/types").SiteManifest }) {
   const pols = observationPolarizations(manifest);
-  return <div className="mb-4 rounded-lg border border-amber-700/60 bg-amber-950/25 p-3 text-sm text-amber-100" role="status"><strong>PROVISIONAL products.</strong> Exact backscatter dates present: {pols.map((pol) => `${pol}: ${observationDates(manifest, pol).join(", ") || "none"}`).join(" · ") || "none"}. {manifest.site.caveat} Missing dates stay missing; difference and change-mask products are excluded from playback and comparison.</div>;
+  return <div className="colophon mb-4" role="status"><strong>PROVISIONAL products.</strong> Exact backscatter dates present: {pols.map((pol) => `${pol}: ${observationDates(manifest, pol).join(", ") || "none"}`).join(" · ") || "none"}. {manifest.site.caveat} Missing dates stay missing; difference and change-mask products are excluded from playback and comparison.</div>;
 }
