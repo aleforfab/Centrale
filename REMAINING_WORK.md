@@ -1,3 +1,10 @@
+> **SUPERSEDED — historical record.** As of 2026-11-15 this file describes an
+> earlier state of the project (pre-round-2). Current truth lives in
+> [`HACKATHON.md`](HACKATHON.md), [`agent-team/PLAN.md`](agent-team/PLAN.md) and
+> [`docs/IMPLEMENTATION_VERIFICATION.md`](docs/IMPLEMENTATION_VERIFICATION.md).
+> Do not use the commands or claims below for decisions; do not edit to force
+> agreement — read forward instead.
+
 # Remaining Work - Dancing with the SARs NISAR Implementation
 
 This document lists all tasks that still need to be completed to transform the prototype into a fully functional NISAR application, organized by phase and priority.

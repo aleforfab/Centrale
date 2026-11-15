@@ -102,8 +102,8 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
         <div className="tm-stage">
           <div className="tm-stage__empty">
             <div>
-              <h2>Scanning selected region…</h2>
-              <p className="tm-muted">Preparing ordered synthetic frames. No real granules are downloaded.</p>
+              <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: "20px", color: "var(--ink)" }}>Scanning selected region…</h2>
+              <p className="footnote" style={{ marginTop: 8 }}>Preparing ordered synthetic frames. No real granules are downloaded.</p>
               <div className="tm-progress" style={{ marginTop: 14 }}><i /></div>
             </div>
           </div>
@@ -115,8 +115,8 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
         <div className="tm-stage">
           <div className="tm-stage__empty">
             <div>
-              <h2>No scan yet</h2>
-              <p className="tm-muted">Select a region and feature set, then press “Start scan”.</p>
+              <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: "20px", color: "var(--ink)" }}>No scan yet</h2>
+              <p className="footnote" style={{ marginTop: 8 }}>Select a region and feature set, then press "Start scan".</p>
             </div>
           </div>
         </div>
@@ -127,8 +127,8 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
         <div className="tm-stage">
           <div className="tm-stage__empty">
             <div>
-              <h2>Backscatter view is off</h2>
-              <p className="tm-muted">Enable “Backscatter observations” in the feature choices to see frames.</p>
+              <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: "20px", color: "var(--ink)" }}>Backscatter view is off</h2>
+              <p className="footnote" style={{ marginTop: 8 }}>Enable "Backscatter observations" in the feature choices to see frames.</p>
             </div>
           </div>
         </div>
@@ -139,7 +139,7 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
       if (!hasCompare) {
         return (
           <div className="tm-stage">
-            <div className="tm-stage__empty"><p className="tm-muted">Enable “Two-date compare” to use this mode.</p></div>
+            <div className="tm-stage__empty"><p className="footnote">Enable "Two-date compare" to use this mode.</p></div>
           </div>
         );
       }
@@ -147,7 +147,7 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
         return (
           <div className="tm-stage">
             <div className="tm-stage__empty">
-              <div className="tm-problem">
+              <div className="colophon">
                 Choose two exact installed dates in chronological order. No substitute date, polarization or
                 difference layer is used.
               </div>
@@ -159,7 +159,7 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
         return (
           <div className="tm-stage">
             <div className="tm-stage__empty">
-              <div className="tm-problem">
+              <div className="colophon">
                 {comparison && !comparison.ok
                   ? comparison.problem.message
                   : "The selected pair cannot be compared exactly. No substitute date, polarization or difference layer is used."}
@@ -220,164 +220,168 @@ export function TimeReview({ scan, loading }: TimeReviewProps) {
     <div>
       {stage()}
 
-      <section className="tm-controls" aria-label="Time review controls">
-        <div className="tm-controls__row">
-          <button
-            type="button"
-            className={`tm-button ${mode === "single" ? "" : "tm-button--ghost"}`}
-            aria-pressed={mode === "single"}
-            onClick={() => { setMode("single"); setPlaying(false); setCalendarError(null); }}
-          >
-            One event date
-          </button>
-          <button
-            type="button"
-            className={`tm-button ${mode === "pair" ? "" : "tm-button--ghost"}`}
-            aria-pressed={mode === "pair"}
-            onClick={() => { setMode("pair"); setPlaying(false); setCalendarError(null); }}
-            disabled={!scan || !hasCompare}
-          >
-            Two dates to compare
-          </button>
-          <span className="tm-muted" style={{ marginLeft: "auto" }}>
-            {scan ? `${scan.pol} · ${scan.dates.length} ordered dates · bbox ${formatBbox(scan.bbox)}` : "Awaiting scan"}
-          </span>
-        </div>
+      <section className="plate" aria-label="Time review controls" style={{ marginTop: "14px" }}>
+        <div className="plate__body">
+          <div className="flex flex-wrap items-center gap-3" style={{ marginBottom: "12px" }}>
+            <button
+              type="button"
+              className={`chapter-button ${mode === "single" ? "" : "chapter-button--ghost"}`}
+              aria-pressed={mode === "single"}
+              onClick={() => { setMode("single"); setPlaying(false); setCalendarError(null); }}
+            >
+              One event date
+            </button>
+            <button
+              type="button"
+              className={`chapter-button ${mode === "pair" ? "" : "chapter-button--ghost"}`}
+              aria-pressed={mode === "pair"}
+              onClick={() => { setMode("pair"); setPlaying(false); setCalendarError(null); }}
+              disabled={!scan || !hasCompare}
+            >
+              Two dates to compare
+            </button>
+            <span className="footnote" style={{ marginLeft: "auto" }}>
+              {scan ? `${scan.pol} · ${scan.dates.length} ordered dates · bbox ${formatBbox(scan.bbox)}` : "Awaiting scan"}
+            </span>
+          </div>
 
-        {mode === "single" ? (
-          <>
-            <div className="tm-calendar__row">
-              <label className="tm-calendar__label">
-                Event date
-                <input
-                  type="date"
-                  value={singleDate}
-                  min={dates[0] ?? ""}
-                  max={dates[dates.length - 1] ?? ""}
-                  disabled={!scan || !hasBackscatter}
-                  onChange={(event) => selectExactDate(event.target.value)}
-                  aria-label="Event date"
-                />
-              </label>
-              <p className="tm-muted" style={{ alignSelf: "end", margin: 0 }}>
-                The calendar accepts exact installed dates only.
-              </p>
-            </div>
-            <label style={{ display: "grid", gap: 6 }}>
-              <span className="tm-muted">Choose one event date (before or after) with the slider</span>
-              <input
-                type="range"
-                min={0}
-                max={Math.max(0, dates.length - 1)}
-                step={1}
-                value={safeIndex}
-                disabled={!scan || !hasBackscatter}
-                onChange={(event) => { setIndex(Number(event.target.value)); setPlaying(false); setCalendarError(null); }}
-                aria-label="Observation date timeline"
-              />
-            </label>
-            <div className="tm-ticks" aria-hidden="true">
-              {dates.map((date) => <span key={date}>{date.slice(5).replace("-", "/")}</span>)}
-            </div>
-            <div className="tm-controls__row">
-              <button
-                type="button"
-                className={`tm-button ${eventLabel === "before" ? "" : "tm-button--ghost"}`}
-                aria-pressed={eventLabel === "before"}
-                onClick={() => setEventLabel("before")}
-              >
-                Before event
-              </button>
-              <button
-                type="button"
-                className={`tm-button ${eventLabel === "after" ? "" : "tm-button--ghost"}`}
-                aria-pressed={eventLabel === "after"}
-                onClick={() => setEventLabel("after")}
-              >
-                After event
-              </button>
-              <button
-                type="button"
-                className="tm-button tm-button--primary"
-                disabled={!scan || !hasBackscatter || !hasPlayback || dates.length < 2}
-                onClick={() => setPlaying((current) => !current)}
-                aria-label={playing ? "Pause playback" : "Play evolution"}
-              >
-                {playing ? "❚❚ Pause" : "▶ Play"}
-              </button>
-              <label>
-                Speed
-                <select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} disabled={!hasPlayback}>
-                  <option value={0.5}>0.5×</option>
-                  <option value={1}>1×</option>
-                  <option value={2}>2×</option>
-                  <option value={4}>4×</option>
-                </select>
-              </label>
-              {!hasPlayback && <span className="tm-muted">Enable “Playback” in feature choices for play/pause.</span>}
-            </div>
-            {calendarError && <p className="tm-problem" role="alert">{calendarError}</p>}
-          </>
-        ) : (
-          <>
-            <div className="tm-calendar__row">
-              <label className="tm-calendar__label">
-                Before date
-                <input
-                  type="date"
-                  value={beforeDate}
-                  min={dates[0] ?? ""}
-                  max={dates[dates.length - 1] ?? ""}
-                  onChange={(event) => setBeforeDate(event.target.value)}
-                  disabled={!scan}
-                  aria-label="Before date"
-                />
-              </label>
-              <label className="tm-calendar__label">
-                After date
-                <input
-                  type="date"
-                  value={afterDate}
-                  min={dates[0] ?? ""}
-                  max={dates[dates.length - 1] ?? ""}
-                  onChange={(event) => setAfterDate(event.target.value)}
-                  disabled={!scan}
-                  aria-label="After date"
-                />
-              </label>
-              <label style={{ flex: 1, minWidth: 220 }}>
-                Reveal — {clampedReveal.toFixed(0)}%
+          {mode === "single" ? (
+            <>
+              <div className="flex flex-wrap items-end gap-3" style={{ marginBottom: "12px" }}>
+                <label className="field">
+                  <span>Event date</span>
+                  <input
+                    type="date"
+                    value={singleDate}
+                    min={dates[0] ?? ""}
+                    max={dates[dates.length - 1] ?? ""}
+                    disabled={!scan || !hasBackscatter}
+                    onChange={(event) => selectExactDate(event.target.value)}
+                    aria-label="Event date"
+                  />
+                </label>
+                <p className="footnote" style={{ margin: "0 0 4px" }}>
+                  The calendar accepts exact installed dates only.
+                </p>
+              </div>
+              <label className="field" style={{ marginBottom: "8px" }}>
+                <span>Choose one event date (before or after) with the slider</span>
                 <input
                   type="range"
                   min={0}
-                  max={100}
-                  value={clampedReveal}
-                  onChange={(event) => setReveal(clampReveal(Number(event.target.value)))}
-                  aria-label="Reveal before and after frames"
+                  max={Math.max(0, dates.length - 1)}
+                  step={1}
+                  value={safeIndex}
+                  disabled={!scan || !hasBackscatter}
+                  onChange={(event) => { setIndex(Number(event.target.value)); setPlaying(false); setCalendarError(null); }}
+                  aria-label="Observation date timeline"
+                  style={{ accentColor: "var(--accent)" }}
                 />
               </label>
-            </div>
-            <div className="tm-chip-row" aria-label="Exact installed dates">
-              {dates.map((date) => <span key={date} className="tm-chip">{date}</span>)}
-            </div>
-            <p className="tm-muted">
-              Only the slider changes the split. Clicking or dragging on the imagery does nothing. Exactly two
-              installed observation dates are used; the viewer refuses to substitute a neighbouring date, a
-              different polarization, or a difference/change-mask layer.
-            </p>
-            {comparison && comparison.ok && (
-              <p className="tm-muted">
-                Resolved: {comparison.selection.before.date} → {comparison.selection.after.date} · {comparison.selection.pol}.
+              <div className="tm-ticks" aria-hidden="true">
+                {dates.map((date) => <span key={date}>{date.slice(5).replace("-", "/")}</span>)}
+              </div>
+              <div className="flex flex-wrap items-center gap-3" style={{ marginTop: "12px" }}>
+                <button
+                  type="button"
+                  className={`chapter-button ${eventLabel === "before" ? "" : "chapter-button--ghost"}`}
+                  aria-pressed={eventLabel === "before"}
+                  onClick={() => setEventLabel("before")}
+                >
+                  Before event
+                </button>
+                <button
+                  type="button"
+                  className={`chapter-button ${eventLabel === "after" ? "" : "chapter-button--ghost"}`}
+                  aria-pressed={eventLabel === "after"}
+                  onClick={() => setEventLabel("after")}
+                >
+                  After event
+                </button>
+                <button
+                  type="button"
+                  className="chapter-button chapter-button--primary"
+                  disabled={!scan || !hasBackscatter || !hasPlayback || dates.length < 2}
+                  onClick={() => setPlaying((current) => !current)}
+                  aria-label={playing ? "Pause playback" : "Play evolution"}
+                >
+                  {playing ? "❚❚ Pause" : "▶ Play"}
+                </button>
+                <label className="field">
+                  <span>Speed</span>
+                  <select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} disabled={!hasPlayback}>
+                    <option value={0.5}>0.5×</option>
+                    <option value={1}>1×</option>
+                    <option value={2}>2×</option>
+                    <option value={4}>4×</option>
+                  </select>
+                </label>
+                {!hasPlayback && <span className="footnote">Enable “Playback” in feature choices for play/pause.</span>}
+              </div>
+              {calendarError && <p className="colophon mt-3" role="alert">{calendarError}</p>}
+            </>
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-3" style={{ marginBottom: "12px" }}>
+                <label className="field">
+                  <span>Before date</span>
+                  <input
+                    type="date"
+                    value={beforeDate}
+                    min={dates[0] ?? ""}
+                    max={dates[dates.length - 1] ?? ""}
+                    onChange={(event) => setBeforeDate(event.target.value)}
+                    disabled={!scan}
+                    aria-label="Before date"
+                  />
+                </label>
+                <label className="field">
+                  <span>After date</span>
+                  <input
+                    type="date"
+                    value={afterDate}
+                    min={dates[0] ?? ""}
+                    max={dates[dates.length - 1] ?? ""}
+                    onChange={(event) => setAfterDate(event.target.value)}
+                    disabled={!scan}
+                    aria-label="After date"
+                  />
+                </label>
+                <label className="field">
+                  <span>Reveal — {clampedReveal.toFixed(0)}%</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={clampedReveal}
+                    onChange={(event) => setReveal(clampReveal(Number(event.target.value)))}
+                    aria-label="Reveal before and after frames"
+                    style={{ accentColor: "var(--accent)" }}
+                  />
+                </label>
+              </div>
+              <div className="tm-chip-row" aria-label="Exact installed dates">
+                {dates.map((date) => <span key={date} className="tm-chip">{date}</span>)}
+              </div>
+              <p className="footnote" style={{ marginTop: "8px" }}>
+                Only the slider changes the split. Clicking or dragging on the imagery does nothing. Exactly two
+                installed observation dates are used; the viewer refuses to substitute a neighbouring date, a
+                different polarization, or a difference/change-mask layer.
               </p>
-            )}
-          </>
-        )}
+              {comparison && comparison.ok && (
+                <p className="footnote" style={{ marginTop: "4px" }}>
+                  Resolved: {comparison.selection.before.date} → {comparison.selection.after.date} · {comparison.selection.pol}.
+                </p>
+              )}
+            </>
+          )}
 
-        {hasProvenance && scan && (
-          <p className="tm-muted" style={{ marginTop: 4 }}>
-            {SYNTHETIC_NOTICE}
-          </p>
-        )}
+          {hasProvenance && scan && (
+            <p className="colophon" style={{ marginTop: "12px" }}>
+              {SYNTHETIC_NOTICE}
+            </p>
+          )}
+        </div>
       </section>
     </div>
   );

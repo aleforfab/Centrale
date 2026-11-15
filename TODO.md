@@ -1,3 +1,10 @@
+> **SUPERSEDED — historical record.** As of 2026-11-15 this file describes an
+> earlier state of the project (pre-round-2). Current truth lives in
+> [`HACKATHON.md`](HACKATHON.md), [`agent-team/PLAN.md`](agent-team/PLAN.md) and
+> [`docs/IMPLEMENTATION_VERIFICATION.md`](docs/IMPLEMENTATION_VERIFICATION.md).
+> Do not use the commands or claims below for decisions; do not edit to force
+> agreement — read forward instead.
+
 # TODO - Dancing with the SARs
 
 Quick reference for what needs to be done next.

@@ -2,7 +2,7 @@
 
 > Shared memory for the hackathon-copilot run of this repository. Update it at every decision.
 > Project owner: aleforfab/Centrale. Working branch (supervisor): `arena/3ac4203d-centrale`.
-> Base for all worker slices: `origin/main` @ `037f42c` (merge of PR #7, 2026-11-14).
+> Base for all worker slices: `origin/main` @ `25878e4` (round 3, 2026-11-15).
 
 ## One-line pitch
 
@@ -44,15 +44,26 @@ Next.js 15 (same-origin `/api/*`, `/products/*` rewrites) → FastAPI (loopback)
 Deployment gate (Gate 2) = GCP VM (see `GCP_CHECKLIST.md`, `DEPLOYMENT_VM.md`);
 not approved yet. Browser tests: local servers + (on VM) real browser.
 
-## Phase status (2026-11-14)
+## Phase status (2026-11-15)
 
 - Phase 0/1 (brief, scope): done — five product questions answered (see handoff).
-- Phase 2 (skeleton runs): done — app installed-product path verified 2026-11-14;
-  not deployed.
-- Phase 3 (core build): slices merged 2026-11-14 — worker 01 gamma→sigma (#9),
-  worker 03 InSAR proposed package (#10), worker 02 Worldview Time Machine (#8).
-  Mapbox tile-placeholder fix open as PR #11. See `agent-team/PLAN.md`.
-- Phase 4/5: not started. Gate 2 and Gate 3 NOT approved.
+- Phase 2 (skeleton runs): done — installed-product path verified; not deployed.
+- Phase 3 (core build): merged 2026-11-14 — worker 01 gamma→sigma (#9), worker 03
+  InSAR proposed package (#10), worker 02 Worldview Time Machine (#8).
+- Phase 4 (interaction repair): merged 2026-11-15 — #11 tile fix, #14 hygiene +
+  fixture delta origin, #15 map trio + playback pre-mount/visibility fix,
+  #16 shared LiveScanPanel, Time Machine own scan-window dates, unified layer
+  list, dedupe. Verified fresh worktree: typecheck clean; 65 tests / 9 files;
+  ruff clean; backend 157 passed; build OK.
+- Phase 5 (havu.cc-inspired rebrand, "The SAR Field Catalogue"): merged
+  2026-11-15 — #13/#17 round setups, #18 Time Machine Field Log + `/method`
+  honesty register + 404, #19 design foundation (paper tokens, masthead), #20
+  Observation Plate + Diptych. Verified: SSR smoke on all routes; `/method`
+  and custom 404 in build; `/`, `/compare`, `/time-machine`, `/method` 200.
+  Browser-level check still pending — needs the VM rebuild below.
+- Sentinel-1 C-band pivot considered and **dropped** 2026-11-15; product stays
+  NISAR L-band GCOV.
+- Gate 2 (Anak Krakatau real build) and Gate 3 (submission) NOT approved.
 
 ## Human gates
 
