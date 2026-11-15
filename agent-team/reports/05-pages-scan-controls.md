@@ -4,7 +4,7 @@
 
 - Branch: `arena/9eeafa5e-centrale`, session-pinned; base `3a956874142f8cdadd3ff991dc8461b6ddce94ce`. The brief names `feat/pages-scan-controls` from `94e12f0`; neither switching branch nor changing the session base is permitted.
 - Implementation and verification HEAD: `c3215b0149ede4bcce2c26c4290d7357ccdaa810`; this report is a subsequent commit.
-- Draft PR: **not opened**. CONTRACT §0 prohibits pushing to `arena/*`, while the session requires all work on the fixed `arena/9eeafa5e-centrale` branch. The branch is not present on origin and a GitHub PR cannot be created without publishing it. Supervisor/user must resolve this restriction; no push or merge attempted.
+- Draft PR: https://github.com/aleforfab/Centrale/pull/16. The user subsequently requested a PR on the session-pinned branch after the CONTRACT §0 push restriction was reported; the branch was published for that request. No merge was attempted.
 
 ## Scope done
 
@@ -131,9 +131,9 @@ Kept: synthetic site caveats preserved and included in handoff; no unverified re
 4. Post-build auto-select/catalog refresh: implemented for Dashboard and Before/After, manifest handoff for Time Machine; mock cache-hit callback tested. Actual backend/job-to-catalog handoff and same-site rebuild require VM verification.
 5. No substitute-date path: existing comparison tests pass and viewer is gated on exact chronological dates; verify both pickers manually.
 
-Browser interaction/pixel verification was not performed in this sandbox. Supervisor should verify on the deployed URL, including real-vs-synthetic caveats, all requested dates, live job cancellation and small-screen layout. Resolve the five-date playback limitation and PR publication restriction before hand-in.
+Browser interaction/pixel verification was not performed in this sandbox. Supervisor should verify on the deployed URL, including real-vs-synthetic caveats, all requested dates, live job cancellation and small-screen layout. See the follow-up below for resolution of the five-date playback limitation.
 
 ## Follow-up — Time Machine playback calendar (2026-11-15)
 
 - The follow-up replaces the Time Machine review with a calendar-based review, without editing worker 04’s `WorldviewReview.tsx` or `scanFrames.ts`. The before/after date inputs and polarization control use the same exact backscatter date availability as the comparison page. Playback includes installed observations between selected endpoints, inclusive; invalid, missing or reversed endpoints stop playback and comparison. Equal dates allow a single frame, not a comparison. No interpolation or derived products enter the timeline. The earlier five-date playback limitation above is resolved for this page.
-- Verification: `npm run typecheck && npm test && npm run build` succeeded; 11 test files, 77 tests passed. The new component test covers arbitrary non-preset dates, inclusive range, exclusion of derived products and invalid endpoints. Browser and real fetch remain unverified. Draft PR remains blocked by the branch-push restriction described above.
+- Verification: `npm run typecheck && npm test && npm run build` succeeded; 11 test files, 77 tests passed. The new component test covers arbitrary non-preset dates, inclusive range, exclusion of derived products and invalid endpoints. Browser and real fetch remain unverified. Draft PR was opened after the user requested publication of this branch.
