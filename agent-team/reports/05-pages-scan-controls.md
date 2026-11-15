@@ -132,3 +132,8 @@ Kept: synthetic site caveats preserved and included in handoff; no unverified re
 5. No substitute-date path: existing comparison tests pass and viewer is gated on exact chronological dates; verify both pickers manually.
 
 Browser interaction/pixel verification was not performed in this sandbox. Supervisor should verify on the deployed URL, including real-vs-synthetic caveats, all requested dates, live job cancellation and small-screen layout. Resolve the five-date playback limitation and PR publication restriction before hand-in.
+
+## Follow-up — Time Machine playback calendar (2026-11-15)
+
+- The follow-up replaces the Time Machine review with a calendar-based review, without editing worker 04’s `WorldviewReview.tsx` or `scanFrames.ts`. The before/after date inputs and polarization control use the same exact backscatter date availability as the comparison page. Playback includes installed observations between selected endpoints, inclusive; invalid, missing or reversed endpoints stop playback and comparison. Equal dates allow a single frame, not a comparison. No interpolation or derived products enter the timeline. The earlier five-date playback limitation above is resolved for this page.
+- Verification: `npm run typecheck && npm test && npm run build` succeeded; 11 test files, 77 tests passed. The new component test covers arbitrary non-preset dates, inclusive range, exclusion of derived products and invalid endpoints. Browser and real fetch remain unverified. Draft PR remains blocked by the branch-push restriction described above.

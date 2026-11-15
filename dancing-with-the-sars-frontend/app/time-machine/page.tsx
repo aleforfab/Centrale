@@ -5,7 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { LiveScanPanel, BuiltProductsBanner } from "@/components/LiveScanPanel";
 import { type Bbox } from "@/components/RegionSelector";
 import { TimeReview } from "@/components/TimeReview";
-import { WorldviewReview } from "@/components/WorldviewReview";
+import { CalendarReview } from "@/components/CalendarReview";
 import { DEFAULT_BBOX, SCAN_DATES, SYNTHETIC_NOTICE, isValidBbox, type ScanResult } from "@/lib/timeMachine";
 import { fetchManifest } from "@/lib/liveFetch";
 import type { SiteManifest } from "@/lib/types";
@@ -67,8 +67,7 @@ export default function TimeMachinePage() {
         <div className="min-w-0 space-y-4">
           {manifest ? <>
             <BuiltProductsBanner manifest={manifest} />
-            <p className="text-xs text-slate-400">The current Time Machine playback is limited to the five Anak Krakatau preset dates; other built dates remain available on the dashboard and Before / after page.</p>
-            <WorldviewReview manifest={manifest} polarization={manifest.layers.find((layer) => layer.kind === "backscatter")?.pol?.toUpperCase() ?? "HH"} />
+            <CalendarReview key={manifest.site.id} manifest={manifest} />
           </> : demoScan ? <>
             <div className="rounded-lg border border-amber-700/60 bg-amber-950/35 p-4 text-sm text-amber-100"><strong>Demo visualization — not NISAR observations, not a real change, not evidence of anything.</strong><br />{demoScan.caveat}</div>
             <TimeReview scan={demoScan} loading={false} />
@@ -78,7 +77,7 @@ export default function TimeMachinePage() {
         </div>
       </div>
       <section className="mt-5 rounded-lg border border-slate-800 bg-slate-950/40 p-4 text-xs leading-5 text-slate-400">
-        <strong className="text-slate-200">Acquisition cadence:</strong> the requested Anak Krakatau stack presets are Aug 13, Aug 25, Sep 6, Sep 18, and Sep 30, 2026. This frontend does not fill gaps, interpolate frames, or substitute dates/polarizations. Actual availability depends on the returned manifest and backend Earthdata access. See <code>docs/LIVE_FETCH.md</code> for backend setup and limitations.
+        <strong className="text-slate-200">Acquisition cadence:</strong> dates depend on the installed observations. This frontend does not fill gaps, interpolate frames, or substitute dates/polarizations. Actual availability depends on the returned manifest and backend Earthdata access. See <code>docs/LIVE_FETCH.md</code> for backend setup and limitations.
       </section>
     </AppShell>
   );
