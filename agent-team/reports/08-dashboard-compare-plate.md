@@ -3,10 +3,9 @@
 ## Branch / PR / SHAs
 
 - Branch: `arena/dfb5a5a0-centrale`. The brief names `feat/dashboard-compare-plate`; this session is pinned to the Arena branch and cannot rename it.
-- PR: https://github.com/aleforfab/Centrale/pull/20 (draft, into `main`, not merged).
-- Base SHA: `013a241` (`main` after PR #19, slice 07). The brief names `7333923`; `main` has since gained PR #17 (docs only) and PR #19 (07). The branch was started on `c412916` and rebased onto `013a241` when 07 merged.
-- HEAD SHA (code): `2848e9c`. This report is one docs-only commit on top of it.
-- Not yet rebased onto 09 (PR #18, still open). Merge order stays 07 → 09 → 08.
+- PR: https://github.com/aleforfab/Centrale/pull/20 (into `main`).
+- Base SHA: `f92f520` (`main` after PR #19, slice 07, and PR #18, slice 09). The brief names `7333923`. The branch was started on `c412916` and rebased twice: onto 07, then onto 09. Merge order 07 → 09 → 08 is respected.
+- HEAD SHA (code): `8111ec2`. This report is one docs-only commit on top of it.
 
 ## Scope done
 
@@ -33,22 +32,21 @@
    - View toggle, legend, attribution and no-token notice are dark chips: `rgba(13,12,10,.88)` background, `#F5F3EC` text.
    - The component draws no border or radius; the page owns the plate.
    - Props (`bbox, layers, activeLayerId, view, setView`), `syncProductLayers`, `syncSiteFootprint`, footprint `#ff8a3d`, ScaleControl and all effects are untouched.
-5. **Rebase onto 07.** Second commit swaps my restated utilities for 07's real primitives by name (`.plate__header`, `.plate__meta`, `.plate__body`, `.field__label`, `.field__input`, `.index-row[data-active]`).
+5. **Rebased onto 07, then 09.** The first commit restated the guide's token values because no stylesheet existed. The second switched to 07's primitives by name. Slice 09 then rewrote `app/redesign.css` and removed or changed several of them (`.plate__meta`, `.field__label`, `.field__input`, `.index-row[data-active]`, `.imagery-chip`, plate padding). The third commit follows the stylesheet now on `main`.
 
 ## Scope not done (and why)
 
-- **Rebase onto 09**: PR #18 is still open. No file overlap is expected (09 owns `app/time-machine/**`, `WorldviewReview.tsx`, `TimeReview.tsx`).
-- **`.imagery-chip` not adopted.** 07 exports it, but its fixed `6px 10px` padding does not fit the segmented view toggle. Map and viewer chips keep the guide's literal values (same colours, same border alpha as 07). Follow-up, not a visual difference.
 - **No new tests.** The brief asks for none; `tests/pages.test.tsx` is untouched.
+- **No deployed browser check.** See "Local rendering check" below.
 
 ## Files changed (`git diff --stat origin/main...HEAD`, at `2848e9c`)
 
 ```
- .../app/compare/page.tsx                           | 185 ++++++--
- dancing-with-the-sars-frontend/app/page.tsx        | 519 +++++++++++++++------
- .../components/ComparisonViewer.tsx                | 273 ++++++-----
+ .../app/compare/page.tsx                           | 184 ++++++--
+ dancing-with-the-sars-frontend/app/page.tsx        | 523 +++++++++++++++------
+ .../components/ComparisonViewer.tsx                | 278 ++++++-----
  dancing-with-the-sars-frontend/components/Map.tsx  |  43 +-
- 4 files changed, 701 insertions(+), 319 deletions(-)
+ 4 files changed, 708 insertions(+), 320 deletions(-)
 ```
 
 Plus this report (`agent-team/reports/08-dashboard-compare-plate.md`).
@@ -59,7 +57,7 @@ None. No edits to 07's or 09's files, the backend, package files, the lockfile, 
 
 ## Checks run
 
-Run on the rebased tree (`2848e9c` content), in `dancing-with-the-sars-frontend/`. Exit code 0.
+Run on the tree rebased onto `f92f520` (`8111ec2` content), in `dancing-with-the-sars-frontend/`. Exit code 0.
 
 ```
 $ npm ci && npm run typecheck && npm test && npm run build
@@ -91,20 +89,19 @@ The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troub
  RUN  v2.1.9 /home/user/Centrale/dancing-with-the-sars-frontend
 
  ✓ tests/comparison.test.ts (30 tests) 11ms
- ✓ tests/time-machine.test.ts (11 tests) 27ms
- ✓ tests/scan-frames.test.ts (8 tests) 13ms
- ✓ tests/source-register.test.ts (10 tests) 7ms
+ ✓ tests/time-machine.test.ts (11 tests) 26ms
+ ✓ tests/scan-frames.test.ts (8 tests) 14ms
  ✓ tests/live-fetch.test.ts (3 tests) 9ms
- ✓ tests/calendar-review.test.tsx (2 tests) 10ms
- ✓ tests/tile-url.test.ts (5 tests) 4ms
+ ✓ tests/calendar-review.test.tsx (2 tests) 12ms
+ ✓ tests/tile-url.test.ts (5 tests) 5ms
  ✓ tests/mapbox-token.test.ts (3 tests) 3ms
  ✓ tests/live-scan-panel.test.tsx (1 test) 8ms
  ✓ tests/pages.test.tsx (2 tests) 3ms
 
- Test Files  10 passed (10)
-      Tests  75 passed (75)
-   Start at  10:57:04
-   Duration  2.59s (transform 269ms, setup 0ms, collect 519ms, tests 95ms, environment 2ms, prepare 657ms)
+ Test Files  9 passed (9)
+      Tests  65 passed (65)
+   Start at  11:04:02
+   Duration  2.31s (transform 261ms, setup 0ms, collect 470ms, tests 91ms, environment 2ms, prepare 589ms)
 
 
 > build
@@ -116,19 +113,20 @@ The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troub
  ✓ Compiled successfully
    Linting and checking validity of types ...
    Collecting page data ...
-   Generating static pages (0/7) ...
-   Generating static pages (1/7) 
-   Generating static pages (3/7) 
-   Generating static pages (5/7) 
- ✓ Generating static pages (7/7)
+   Generating static pages (0/8) ...
+   Generating static pages (2/8) 
+   Generating static pages (4/8) 
+   Generating static pages (6/8) 
+ ✓ Generating static pages (8/8)
    Finalizing page optimization ...
    Collecting build traces ...
 
 Route (app)                              Size     First Load JS
-┌ ○ /                                    7.52 kB         619 kB
-├ ○ /_not-found                          873 B          88.2 kB
+┌ ○ /                                    7.55 kB         619 kB
+├ ○ /_not-found                          183 B          87.5 kB
 ├ ○ /compare                             3.04 kB         618 kB
-├ ○ /time-machine                        8.06 kB         623 kB
+├ ○ /method                              195 B          96.2 kB
+├ ○ /time-machine                        8.49 kB         623 kB
 ├ ƒ /tm/frames/[date]                    0 B                0 B
 └ ƒ /tm/scan                             0 B                0 B
 + First Load JS shared by all            87.3 kB
@@ -141,9 +139,9 @@ Route (app)                              Size     First Load JS
 ƒ  (Dynamic)  server-rendered on demand
 ```
 
-Baseline before my changes (on `c412916`): typecheck clean, 10 files / 75 tests passed. Same counts after.
+The count is 9 files / 65 tests. Before slice 09 merged it was 10 files / 75 tests: PR #18 deleted `lib/sourceRegister.ts` and `tests/source-register.test.ts` (10 tests). This slice adds and removes no tests.
 
-Backend gates were not run: no backend file is touched.
+Backend gates were not run locally: no backend file is touched. CI runs them on the PR.
 
 ### Local rendering check (not deployed verification)
 
@@ -152,18 +150,20 @@ Run in the sandbox with headless Chromium (software WebGL), the backend serving 
 - **Fonts**: the sandbox cannot reach Google Fonts, so the copy loaded Archivo and IBM Plex Mono from local files. The repo's runtime `@import` was not exercised.
 - **Basemap**: the Mapbox token is URL-restricted and style requests fail from the sandbox. `/` was checked with NISAR tiles over the black fallback canvas. `/compare` imagery was checked with style requests answered by an empty mock style.
 
-Viewed against 07's real CSS (after the rebase):
+Viewed against the stylesheet now on `main` (07 + 09), at 1440×900:
 
-| View | Viewport | Result |
-|---|---|---|
-| `/`, difference + ±2 dB mask active | 1440×900 | Plate header, HUD chip, legend, rail, active-row marker, rule-table, histogram, footnote render as intended. |
-| `/`, default layer | 390×844 | Single column. Legend clears the attribution chip and the Mapbox wordmark. |
-| `/compare`, exact pair | 1440×900 | Diptych header, fields, plate, hairline, REVEAL tab, captions, rule-table, colophons render as intended. |
-| `/compare`, empty catalogue (`/api/sites` → `[]`) | 1440×900 | Paper plate, colophon, CLI hint. |
+| View | Result |
+|---|---|
+| `/`, difference + ±2 dB mask active | Plate header, flush map, HUD chip, legend, rail, active-row marker, rule-table, ink histogram, footnote render as intended. |
+| `/compare`, exact pair | Diptych header, fields, flush plate, hairline, REVEAL tab, captions, rule-table, colophons render as intended. |
+| `/compare`, a date that is not installed | Viewer does not mount. Header cell and colophon state that no substitute is used. |
 
-Viewed before the rebase only, against my stand-in for 07's CSS: `/` empty catalogue, `/compare` with a non-installed date (viewer does not mount; refusal colophon shows), `/compare` mobile.
+Viewed against 07's stylesheet only, before 09 merged: `/` at 390×844 (single column; legend clears the attribution chip and the Mapbox wordmark) and the `/compare` empty catalogue. Not re-viewed after the 09 rebase: mobile layouts and both empty states.
 
-One defect was found and fixed this way: `.rule-table th` uppercases row labels, which rendered "Noise estimate σ" as "NOISE ESTIMATE Σ". The symbol is now exempt from the transform.
+Two defects were found and fixed this way:
+
+- `.rule-table th` uppercases row labels, which rendered "Noise estimate σ" as "NOISE ESTIMATE Σ". The symbol is now exempt from the transform.
+- `.redesign-content :is(section, …)` forces a paper background with `!important`, which would have stripped the colophon colour from the viewer's refusal notice. It is now a `div`.
 
 ## Honesty invariants
 
@@ -196,18 +196,20 @@ New copy:
 
 ## Known gaps, follow-ups, TODOs left in code
 
-1. **`Map` chrome inside 09's surfaces is unchecked.** `CalendarReview.tsx` and `WorldviewReview.tsx` render `Map` in `h-[28rem] overflow-hidden rounded-lg` wrappers. `Map` no longer draws its own border or radius, so those wrappers now supply the frame. Not viewed.
-2. **Fallback canvas colour changed** in `Map.tsx` and `ComparisonViewer.tsx` (`#071018` / `#0b1720` → `#0D0C0A` / `#14120F`). Visual only; it is the background behind tiles when no Mapbox style loads.
-3. **Sticky plate.** The left plate is `position: sticky` from `lg` up when the viewport is at least 640px tall, so the map stays in view while the rail scrolls. Full-page screenshots taken after scrolling show it displaced; that is a capture artefact.
-4. **`!` modifier.** `redesign.css` is imported from `AppShell` and loads after Tailwind, so a utility cannot beat a primitive's reset at equal specificity. Ten local margins (nine on `.footnote`, one on `.tm-panel__title`) and one font size use Tailwind's `!` modifier. A `--spaced` variant in 07's stylesheet would remove the need.
-5. **`/favicon.ico` returns 404.** Pre-existing; the repo ships no favicon. Not in my lane.
-6. No TODOs left in code.
+1. **`Map` chrome inside the Time Machine is unchecked.** `CalendarReview.tsx` and `WorldviewReview.tsx` render `Map` and `ComparisonViewer` inside their own panels. `Map` no longer draws its own border or radius, so those wrappers supply the frame. Not viewed.
+2. **Mobile and empty states were not re-viewed after the 09 rebase.** They use the same primitives as the views that were.
+3. **Fallback canvas colour changed** in `Map.tsx` and `ComparisonViewer.tsx` (`#071018` / `#0b1720` → `#0D0C0A` / `#14120F`). Visual only; it is the background behind tiles when no Mapbox style loads.
+4. **Sticky plate.** The left plate is `position: sticky` from `lg` up when the viewport is at least 640px tall, so the map stays in view while the rail scrolls. Full-page screenshots taken after scrolling show it displaced; that is a capture artefact.
+5. **Three `!` overrides of the shared stylesheet**, all in `app/page.tsx`: the rail heading's margin (`.tm-panel__title`), and the histogram bars' background and radius. `.tm-spark i` paints a gradient with rounded tops; the guide says no gradients, and the brief asks for ink bars. The clean fix is in `redesign.css`, which is not in my lane.
+6. **Plate border weight.** `.redesign-content :is(section, …)` sets `border-color: var(--hairline) !important`, so a `<section class="plate">` draws the lighter hairline, not `--hairline-strong`. Left as the stylesheet decides.
+7. **On-imagery chips use the guide's literal values** (`rgba(13,12,10,.88)`, `#F5F3EC`). The stylesheet on `main` exports no shared chip class.
+8. **`/favicon.ico` returns 404.** Pre-existing; the repo ships no favicon.
+9. No TODOs left in code.
 
 ## What the supervisor must verify manually
 
-1. **Deployed browser check on https://dancing-sars.duckdns.org/** after merging 07 → 09 → 08. Nothing above replaces it. On `/`: plate header and dark chips over real `satellite-streets-v12`; legend clear of the Mapbox wordmark; HUD chip clear of the view toggle. On `/compare`: real `dark-v11` under the imagery; drag the slider and confirm the hairline and REVEAL tab track it.
+1. **Deployed browser check on https://dancing-sars.duckdns.org/** after the VM rebuild. Nothing above replaces it. On `/`: plate header and dark chips over real `satellite-streets-v12`; legend clear of the Mapbox wordmark; HUD chip clear of the view toggle. On `/compare`: real `dark-v11` under the imagery; drag the slider and confirm the hairline and REVEAL tab track it.
 2. **Fonts**: Archivo 900 on the Diptych dates and IBM Plex Mono on tags load from Google Fonts at runtime.
 3. **Real data**: a real site has longer titles and more layers than the fixture (12 layers, 2 scenes). Check the plate header wraps cleanly and the LAYERS list stays usable.
-4. **Time Machine after 09 merges**: `Map` and `ComparisonViewer` inside the calendar and Worldview panels (gap 1).
+4. **Time Machine**: `Map` and `ComparisonViewer` inside the calendar and Worldview panels (gap 1). Also `/` and `/compare` at phone width and with an empty catalogue (gap 2).
 5. **Copy table above**: confirm or edit the reworded eyebrows, subtitle and the new sentences.
-6. **CI** on PR #20 is green before merge.
