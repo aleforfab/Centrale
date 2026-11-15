@@ -114,3 +114,21 @@ after freeze except reverts of visibly broken things.
   no merges performed.** Merge order 01 → 03 → 02 into `main` awaits user go.
   Real Anak Krakatau build remains unrun (VM runbook ready:
   `docs/ANAK_KRAKATAU_VM_BUILD.md`).
+
+## Round 2 setup (2026-11-14, arena/da6e366a-centrale)
+
+- Maintainer decisions: keep NISAR L-band (Sentinel-1 C-band pivot dropped);
+  map readability trio + footprint + scale in scope; Time Machine must accept
+  operator-selected scan dates; Dashboard/Before/After gain the selection area +
+  scan-window calendar + scan button from Time Machine; dashboard layer
+  dropdown-vs-checkboxes redundancy and overlapping features to be unified;
+  playback image flash to be fixed (root cause identified: fresh `layers` array
+  per tick → `syncProductLayers` remove/add → raster tiles dropped).
+- Round-2 setup committed on `arena/da6e366a-centrale`: `skills/dancing-with-the-sars/SKILL.md`
+  (Agent Skills format), CONTRACT round-2 lanes (base `94e12f0`), briefs
+  `04-map-playback-readability.md`, `05-pages-scan-controls.md`,
+  `06-hygiene-fixture-delta.md`. Merge order 06 → 04 → 05.
+- NOT assigned (maintainer/VM/supervisor only): A2 VM rebuild (ff-pull + remove
+  NEXT_PUBLIC_API_URL + verify deployed URL), A3 live-fetch operator guard
+  design, Gate 2 Anak Krakatau build (go-ahead not given), havu.cc redesign
+  (Track C — needs C0 decisions), integration verification pass.
