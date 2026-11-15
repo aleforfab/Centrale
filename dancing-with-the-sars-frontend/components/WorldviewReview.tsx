@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ComparisonViewer } from "@/components/ComparisonViewer";
 import { Map } from "@/components/Map";
-import { KRAKATAU_STACK_DATES, manifestToScanFrames } from "@/lib/scanFrames";
+import { framePhase, manifestToScanFrames, scanFrameDates } from "@/lib/scanFrames";
 import type { SiteManifest } from "@/lib/types";
 
 function trackFrame(granule: string): string {
@@ -11,15 +11,13 @@ function trackFrame(granule: string): string {
   return match ? `Track ${match[1]} · Frame ${match[2]}` : "Track/frame not encoded in granule name";
 }
 
-function eventPhase(date: string): string {
-  if (date < "2026-09-06") return "Before event";
-  if (date === "2026-09-06") return "Event date";
-  if (date <= "2026-10-06") return "Month after event";
-  return "Later acquisition";
-}
-
 export function WorldviewReview({ manifest, polarization }: { manifest: SiteManifest; polarization: string }) {
   const frames = useMemo(() => manifestToScanFrames(manifest, polarization), [manifest, polarization]);
+  // Referentially stable across playback ticks: Map mounts every frame's
+  // raster source once and never re-adds sources while `index` advances.
+  const playbackLayers = useMemo(() => frames.map((frame) => frame.layer), [frames]);
+  // Date presets are derived from the loaded manifest's backscatter frames.
+  const datePresets = useMemo(() => scanFrameDates(frames), [frames]);
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [mode, setMode] = useState<"playback" | "compare">("playback");
@@ -83,7 +81,7 @@ export function WorldviewReview({ manifest, polarization }: { manifest: SiteMani
         <div>
           <p className="text-xs uppercase tracking-[0.16em] text-sky-300">{manifest.site.title}</p>
           <h2 className="mt-1 text-lg font-semibold">{mode === "playback" ? current?.date : `${beforeDate} → ${afterDate}`}</h2>
-          <p className="mt-1 text-xs text-slate-400">{polarization} polarization · {frames.length} exact backscatter acquisition{frames.length === 1 ? "" : "s"} · {mode === "playback" ? `${eventPhase(current?.date ?? "")} · ${index + 1} of ${frames.length}` : "before / after"}</p>
+          <p className="mt-1 text-xs text-slate-400">{polarization} polarization · {frames.length} exact backscatter acquisition{frames.length === 1 ? "" : "s"} · {mode === "playback" ? `${framePhase(manifest, frames, current?.date ?? "")} · ${index + 1} of ${frames.length}` : "before / after"}</p>
         </div>
         <div className="flex gap-2">
           <button type="button" className={`tm-button ${mode === "playback" ? "" : "tm-button--ghost"}`} aria-pressed={mode === "playback"} onClick={() => { setMode("playback"); setPlaying(false); }}>Animate stack</button>
@@ -94,7 +92,7 @@ export function WorldviewReview({ manifest, polarization }: { manifest: SiteMani
       {mode === "playback" && current ? (
         <>
           <div className="h-[28rem] overflow-hidden rounded-lg">
-            <Map bbox={manifest.site.bbox} layers={[current.layer]} view={view} setView={setView} />
+            <Map bbox={manifest.site.bbox} layers={playbackLayers} activeLayerId={current.layer.id} view={view} setView={setView} />
           </div>
           <div className="rounded-lg border border-slate-700 bg-[#111a24] p-4">
             <div className="flex flex-wrap items-center gap-3">
@@ -111,9 +109,9 @@ export function WorldviewReview({ manifest, polarization }: { manifest: SiteMani
             </div>
             <input className="mt-4 w-full accent-sky-400" type="range" min={0} max={frames.length - 1} step={1} value={index} onChange={(event) => { setIndex(Number(event.target.value)); setPlaying(false); }} aria-label="Observation timeline" />
             <div className="mt-2 flex flex-wrap gap-2" aria-label="Exact acquisition date presets">
-              {KRAKATAU_STACK_DATES.map((date) => {
+              {datePresets.map((date) => {
                 const frameIndex = frames.findIndex((frame) => frame.date === date);
-                return <button type="button" key={date} className={`tm-chip ${frameIndex === index ? "tm-chip--active" : ""}`} disabled={frameIndex < 0} title={frameIndex < 0 ? "No exact observation for this date was returned" : `Select exact acquisition ${date}`} onClick={() => { setIndex(frameIndex); setPlaying(false); }}>{date}{frameIndex < 0 ? " · unavailable" : ""}</button>;
+                return <button type="button" key={date} className={`tm-chip ${frameIndex === index ? "tm-chip--active" : ""}`} disabled={frameIndex < 0} title={`Select exact acquisition ${date}`} onClick={() => { if (frameIndex < 0) return; setIndex(frameIndex); setPlaying(false); }}>{date}</button>;
               })}
             </div>
             <p className="mt-3 text-xs text-slate-400">{current.layer.title ?? "Backscatter observation"}. Playback steps through installed observations only; there is no date interpolation.</p>
@@ -131,11 +129,11 @@ export function WorldviewReview({ manifest, polarization }: { manifest: SiteMani
               </label>
             </div>
             <div className="mt-3 flex flex-wrap gap-2" aria-label="Exact date presets">
-              {KRAKATAU_STACK_DATES.map((date) => <button type="button" className="tm-chip" key={date} disabled={!frames.some((frame) => frame.date === date)} title={frames.some((frame) => frame.date === date) ? `Select exact date ${date}` : `No exact observation for ${date} is installed`} onClick={() => {
+              {datePresets.map((date) => <button type="button" className={`tm-chip ${date === beforeDate || date === afterDate ? "tm-chip--active" : ""}`} key={date} title={`Select exact date ${date}`} onClick={() => {
                 if (!beforeDate || beforeDate === afterDate) setBeforeDate(date);
                 else setAfterDate(date);
                 setDateError(null);
-              }}>{date}{frames.some((frame) => frame.date === date) ? "" : " · unavailable"}</button>)}
+              }}>{date}</button>)}
             </div>
             {dateError && <p className="mt-3 text-sm text-amber-200" role="alert">{dateError}</p>}
             {(!compareDatesAvailable || dateError) && <p className="mt-3 text-sm text-amber-200">Choose two exact installed dates in chronological order. No substitute date or layer is used.</p>}
