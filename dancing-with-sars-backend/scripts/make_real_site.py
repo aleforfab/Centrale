@@ -36,7 +36,14 @@ from shapely.geometry import box as shapely_box
 from shapely.geometry import shape
 
 DEFAULT_BBOX = "-36.3523,-8.3349,-33.6252,-5.5448"
-CAVEAT = "NISAR L2 GCOV backscatter · PROVISIONAL"
+CAVEAT = (
+    "Real NISAR L2 GCOV ({maturity}) radar backscatter change, not a validated "
+    "hazard product. Backscatter change alone is not evidence of flooding, damage "
+    "or subsidence. GCOV carries detected amplitude only, so no interferometric "
+    "phase, no deformation measurement, and no ground truth have been used. "
+    "Maturity is {maturity}: the products are not validated and may be reprocessed "
+    "by NASA."
+)
 
 
 def parse_bbox(text: str) -> list[float]:
@@ -209,7 +216,7 @@ description: >-
   {args.frame}, {args.direction} direction, comparing {len(dates)} consecutive
   acquisitions spaced by the 12-day NISAR repeat cycle.
 caveat: >-
-  {CAVEAT}
+  {CAVEAT.format(maturity=args.maturity)}
 bbox: {bbox}
 polarizations:
   - HH
