@@ -11,6 +11,10 @@ import {
   usablePairs,
 } from "@/lib/comparison";
 import type { SiteManifest } from "@/lib/types";
+import { Map, type MapView } from "@/components/Map";
+import { api } from "@/lib/api";
+import { resolveTileUrl } from "@/lib/tileUrl";
+import { setObservationPalette } from "@/lib/falseColor";
 import { getMapboxToken, hasMapboxToken } from "@/lib/mapboxToken";
 
 const MAPBOX_TOKEN = getMapboxToken();
@@ -53,6 +57,9 @@ export interface ComparisonViewerProps {
   manifest: SiteManifest;
   pairId: string;
   pol: string;
+  showProducts?: boolean;
+  falseColor?: boolean;
+  onFalseColorChange?: (enabled: boolean) => void;
 }
 
 function camerasMatch(a: mapboxgl.Map, b: mapboxgl.Map): boolean {
@@ -67,7 +74,14 @@ function camerasMatch(a: mapboxgl.Map, b: mapboxgl.Map): boolean {
   );
 }
 
-export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProps) {
+export function ComparisonViewer({ manifest, pairId, pol, showProducts = false, falseColor: controlledColor, onFalseColorChange }: ComparisonViewerProps) {
+  const [localColor, setLocalColor] = useState(false);
+  const falseColor = controlledColor ?? localColor;
+  const setFalseColor = (enabled: boolean) => { setLocalColor(enabled); onFalseColorChange?.(enabled); };
+  const colorRef = useRef(falseColor);
+  colorRef.current = falseColor;
+  const [product, setProduct] = useState("difference");
+  const [view, setView] = useState<MapView>("sar");
   const [reveal, setReveal] = useState(50);
   const [mapError, setMapError] = useState<string | null>(null);
   const beforeContainer = useRef<HTMLDivElement>(null);
@@ -79,6 +93,10 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
   const selection = result.ok ? result.selection : null;
   const availablePols = useMemo(() => observationPolarizations(manifest), [manifest]);
   const pairs = useMemo(() => usablePairs(manifest), [manifest]);
+
+  const productLayers = useMemo(() => manifest.layers.filter((layer) => layer.pair_id === pairId && (layer.pol ?? "").toUpperCase() === pol.toUpperCase() && (layer.kind === "difference" || layer.kind === "change_mask")), [manifest.layers, pairId, pol]);
+  const chosenProduct = productLayers.find((layer) => product === "difference" ? layer.kind === "difference" : layer.kind === "change_mask" && layer.threshold_db === Number(product));
+  const overlayLayers = useMemo(() => chosenProduct && selection ? [chosenProduct, selection.after.layer] : [], [chosenProduct, selection]);
 
   const beforeLayerId = selection?.before.layer.id;
   const afterLayerId = selection?.after.layer.id;
@@ -154,11 +172,12 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
       if (!instance || !layerId) continue;
       const layer = manifest.layers.find((item) => item.id === layerId);
       if (!layer) continue;
-      const tiles = [layer.tile_url_template];
+      const tiles = [resolveTileUrl(layer.tile_url_template, api.baseUrl)];
       const apply = () => {
         const existing = instance.getSource(sourceId) as mapboxgl.RasterTileSource | undefined;
         if (existing) {
           existing.setTiles(tiles);
+          setObservationPalette(instance, `comparison-${side}-raster`, colorRef.current);
           return;
         }
         instance.addSource(sourceId, {
@@ -174,11 +193,27 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
           source: sourceId,
           paint: { "raster-opacity": 0.92 },
         });
+        setObservationPalette(instance, `comparison-${side}-raster`, colorRef.current);
       };
       if (instance.isStyleLoaded()) apply();
       else instance.once("load", apply);
     }
   }, [beforeLayerId, afterLayerId, manifest.layers]);
+
+  useEffect(() => {
+    const cleanups: Array<() => void> = [];
+    for (const [instance, id] of [[beforeMap.current, "comparison-before-raster"], [afterMap.current, "comparison-after-raster"]] as const) {
+      if (!instance) continue;
+      const apply = () => {
+        if (!instance.isStyleLoaded()) return;
+        instance.off("idle", apply);
+        setObservationPalette(instance, id, falseColor);
+      };
+      if (instance.isStyleLoaded()) apply(); else instance.on("idle", apply);
+      cleanups.push(() => { instance.off("idle", apply); });
+    }
+    return () => { cleanups.forEach((cleanup) => cleanup()); };
+  }, [falseColor, beforeLayerId, afterLayerId]);
 
   if (!result.ok) {
     return (
@@ -203,6 +238,10 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
       <section className="min-w-0 xl:col-span-8" aria-label="Before and after imagery">
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <button type="button" className="tm-button" aria-pressed={falseColor} onClick={() => setFalseColor(!falseColor)}>False colour: {falseColor ? "on" : "off"}</button>
+          <span className={FOOTNOTE}>Observation display palette only: purple = weaker, pale yellow = stronger brightness. Not a colour composite; difference and mask colours stay unchanged.</span>
+        </div>
         <div className={PLATE}>
           <div className="relative h-[26rem] overflow-hidden bg-[#0D0C0A] sm:h-[32rem]">
             <>
@@ -239,11 +278,7 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
               >
                 <span className="uppercase tracking-[0.18em]">After</span> · {active.after.date}
               </div>
-              {!HAS_MAPBOX_TOKEN && (
-                <div className={`${IMAGERY_CHIP} pointer-events-none absolute bottom-3 right-3 px-2 py-1 text-[10px] leading-4`}>
-                  Local canvas · exact product tiles retained · no Mapbox basemap
-                </div>
-              )}
+              <div className={`${IMAGERY_CHIP} absolute bottom-3 right-3 px-2 py-1 text-[10px]`}>Map imagery © Mapbox{!HAS_MAPBOX_TOKEN && " · local canvas"}</div>
               {/* Reveal marker: a 1px hairline with a paper tab. Display only — the range input below is the control. */}
               <div
                 className="pointer-events-none absolute inset-y-0 w-px bg-[#F5F3EC]"
@@ -278,6 +313,16 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
             </div>
           </div>
         </div>
+
+        {showProducts && <section className="mt-5" aria-label="Measured backscatter change">
+          <h2 className={`${LABEL} mb-2`}>Measured backscatter change, exact dates · {active.before.date} → {active.after.date}</h2>
+          <label className="field block mb-3">Installed product <select value={product} onChange={(e) => setProduct(e.target.value)}>
+            <option value="difference">Difference · finish minus start (dB)</option>
+            {[6, 3, 2].map((threshold) => <option key={threshold} value={threshold} disabled={!productLayers.some((item) => item.kind === "change_mask" && item.threshold_db === threshold)}>{threshold} dB mask</option>)}
+          </select></label>
+          {chosenProduct ? <><div className="h-[26rem]"><Map bbox={manifest.site.bbox} layers={overlayLayers} view={view} setView={setView} falseColor={falseColor} onFalseColorChange={setFalseColor} /></div>
+            <p className={`${FOOTNOTE} mt-2`}>{chosenProduct.kind === "change_mask" ? "Categorical mask: blue = lower return, red = higher return." : "Difference: blue = lower return, neutral = 0 dB, red = higher return. Finish minus start."} The 2 dB mask can be dominated by open-water speckle.</p></> : <p className={COLOPHON}>This product is not installed for the selected pair and polarization.</p>}
+        </section>}
 
         {mapError && (
           <p className={`${COLOPHON} mt-3 [overflow-wrap:anywhere]`} role="alert">
@@ -367,7 +412,7 @@ export function ComparisonViewer({ manifest, pairId, pol }: ComparisonViewerProp
           <p className="mt-2">{active.caveat}</p>
           <p className="mt-2">
             Two dates show a measured difference in radar brightness. They do not by themselves identify the
-            cause, the extent of an event, or damage.
+            cause or extent of an event.
           </p>
         </div>
       </aside>

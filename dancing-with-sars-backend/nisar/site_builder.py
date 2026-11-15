@@ -396,7 +396,7 @@ def build_site(
         tile_result = render_tiles(
             cog_path,
             output_dir / tile_relative,
-            kind=kind,
+            kind="difference_diverging" if config.id == "anak-krakatau" and kind == "difference" else kind,
             min_zoom=tile_config.min_zoom,
             max_zoom=tile_config.max_zoom,
             budget_mb=remaining_budget,
@@ -505,9 +505,9 @@ def build_site(
                 pre_window.crs,
                 "difference",
                 pair_id=str(pair["id"]),
-                minimum=-15,
-                maximum=15,
-                legend="Finish minus start backscatter (dB): blue lower, red higher",
+                minimum=-8 if config.id == "anak-krakatau" else -15,
+                maximum=8 if config.id == "anak-krakatau" else 15,
+                legend=("Finish minus start (dB): −8 blue, 0 neutral, +8 red" if config.id == "anak-krakatau" else "Finish minus start backscatter (dB): blue lower, red higher"),
                 normalization=pair_norm,
             )
             pair_stats_by_pol[pol] = {}

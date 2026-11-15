@@ -243,3 +243,44 @@ def test_colourize_keeps_nan_transparent_without_invalid_cast():
     assert rgba[..., 3][0, 1] == 0, "NaN pixel must be transparent"
     assert tuple(rgba[..., :3][0, 1]) == (0, 0, 0), "NaN pixel must not keep a stale colour"
     assert rgba[..., 3][0, 0] == 255
+
+
+def test_diverging_difference_ramp_and_categorical_masks():
+    from nisar.export import _colourize
+
+    values = np.array([[-8., -4., 0., 4., 8., np.nan]], dtype=np.float32)
+    rgba = _colourize(values, "difference_diverging", -8, 8)[0]
+    assert list(rgba[0]) == [40, 120, 255, 255]
+    assert list(rgba[2]) == [245, 245, 245, 255]
+    assert list(rgba[4]) == [255, 82, 48, 255]
+    assert rgba[1, 2] > rgba[1, 0] and rgba[3, 0] > rgba[3, 2]
+    assert rgba[5, 3] == 0
+    masks = _colourize(np.array([[-1., 1., np.nan]]), "change_mask", -1, 1)[0]
+    assert list(masks[0]) == [40, 120, 255, 255]
+    assert list(masks[1]) == [255, 82, 48, 255]
+    assert masks[2, 3] == 0
+
+
+def test_recolour_publishes_only_difference_tiles_without_touching_cog(tmp_path):
+    from scripts.recolour_anak_krakatau import recolour
+
+    site = tmp_path / "anak-krakatau"
+    cog = write_cog(np.array([[0., -8.], [8., np.nan]], dtype=np.float32),
+                    site / "cogs" / "difference-test.tif",
+                    from_origin(-1000, 1000, 1000, 1000), "EPSG:3857")
+    before = cog.read_bytes()
+    manifest = {"site": {"id": "anak-krakatau"}, "layers": [
+        {"id": "difference-test", "kind": "difference", "min_zoom": 0, "max_zoom": 0,
+         "tile_url_template": "/products/anak-krakatau/tiles/difference-test/{z}/{x}/{y}.png"},
+        {"id": "mask-test", "kind": "change_mask", "min_zoom": 0, "max_zoom": 0,
+         "tile_url_template": "/products/anak-krakatau/tiles/mask-test/{z}/{x}/{y}.png"},
+    ]}
+    (site / "manifest.json").write_text(json.dumps(manifest))
+    recolour(site)
+    updated = json.loads((site / "manifest.json").read_text())
+    assert "tiles-diverging-v1" in updated["layers"][0]["tile_url_template"]
+    assert updated["layers"][1] == manifest["layers"][1]
+    assert (site / "tiles-diverging-v1/difference-test/0/0/0.png").exists()
+    assert cog.read_bytes() == before
+    with pytest.raises(FileExistsError):
+        recolour(site)

@@ -262,6 +262,7 @@ export function RegionSelector({ initialBbox = DEFAULT_BBOX, onChange }: RegionS
       <h2 className="plate__tag tm-panel__title">1 · Select a region</h2>
       <div className="tm-map">
         <div ref={containerRef} className="tm-map__canvas" aria-label="Mapbox region selector" />
+        <div className="absolute bottom-3 right-3 z-10 bg-black px-2 py-1 text-[10px] text-white">Map imagery © Mapbox</div>
         <div className="tm-map__grid" aria-hidden="true" />
         <div className="tm-map__hint">
           {drawMode

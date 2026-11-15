@@ -13,7 +13,7 @@ export default function NotFound() {
           <p className="footnote" style={{ marginBottom: "24px" }}>The page you requested is not in the catalogue. It was never installed, or it has been removed.</p>
           <nav className="flex flex-wrap justify-center gap-4">
             <Link href="/" className="chapter-button">Dashboard</Link>
-            <Link href="/compare" className="chapter-button">Before · After</Link>
+            <Link href="/time-machine#compare" className="chapter-button">Before · After</Link>
             <Link href="/time-machine" className="chapter-button">Time Machine</Link>
           </nav>
         </div>
