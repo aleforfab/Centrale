@@ -6,6 +6,8 @@
 
 :root {
   color-scheme: light;
+
+  /* Paper + ink tokens — fixed names per REDESIGN_GUIDE §3 */
   --paper: #FAF9F6;
   --paper-2: #F3F1EC;
   --paper-3: #E9E6DE;
@@ -14,8 +16,8 @@
   --ink-mute: #6E695E;
   --hairline: rgba(22, 19, 15, 0.16);
   --hairline-strong: rgba(22, 19, 15, 0.32);
-  --accent: #C2410C; /* text + UI on paper — AA */
-  --accent-graphic: #FF8A3D; /* marks only, large or non-text */
+  --accent: #C2410C;
+  --accent-graphic: #FF8A3D;
   --accent-dim: rgba(194, 65, 12, 0.10);
   --colophon: #EDE7DA;
   --font-display: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -24,25 +26,17 @@
   --shadow: none;
 }
 
-*,
-*::before,
-*::after {
+* {
   box-sizing: border-box;
 }
 
 ::selection {
   background: var(--accent-dim);
-  color: var(--ink);
 }
 
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-}
-
-html {
-  background: var(--paper);
-  color: var(--ink-soft);
 }
 
 body {
@@ -53,30 +47,15 @@ body {
   font-size: 15px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  color: var(--ink);
-  font-family: var(--font-display);
-}
-
-code,
-kbd,
-samp,
-pre {
+code, kbd, samp {
   font-family: var(--font-mono);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

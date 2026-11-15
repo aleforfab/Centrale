@@ -4,6 +4,7 @@ const LINKS = [
   { href: "/", label: "Dashboard" },
   { href: "/compare", label: "Before / after" },
   { href: "/time-machine", label: "Time Machine" },
+  { href: "/method", label: "Method" },
 ];
 
 export function SiteNav({ current }: { current?: string }) {
