@@ -1,4 +1,6 @@
-# Brief 09 — Replate: Time Machine (Field Log) + new `/method` honesty register (frontend)
+# Brief 09 — Replate: Time Machine (Field Log) + new `/method` summary (frontend)
+
+> Historical brief. On 2026-11-15 the procedural demo/player and frame routes described here were removed. The current `/time-machine` reads installed manifests and exact dated observations; `/method` is a short observations/products summary.
 
 Branch: `feat/timemachine-method-plate` from `origin/main` @ `7333923`. Read
 `agent-team/CONTRACT.md` (round 3), `skills/dancing-with-the-sars/SKILL.md`, and
@@ -9,18 +11,15 @@ Repo: `aleforfab/Centrale`.
 
 ## Why
 
-Time Machine is the emotional core of the product and the place where honesty
-is easiest to lose. It becomes a **field log**: numbered chapters, exact entries,
-measured claims. And the app gains the one page a skeptical journalist or judge
-will read: `/method` — the honesty register, written for outsiders.
+This brief recorded a visual redesign of the Time Machine as a **field log**:
+numbered chapters, dated entries and a concise `/method` page for readers who
+want to understand the observations and products.
 
 ## Deliverables
 
 ### `app/time-machine/page.tsx` — chapters per REDESIGN_GUIDE §6 `/time-machine`
-- Left rail: `01 REGION` plate then `02 WINDOW & FETCH` plate around the shared
-  `LiveScanPanel` (props/behavior from round 2 — you do not re-implement fetch;
-  progress renders as mono log lines `stage · percent` inside the panel area
-  via the panel's own markup hooks, or adjacent log panel if simpler).
+- Earlier layout: `01 — Region` and `02 — Window & Fetch` plates around the
+  shared `LiveScanPanel`.
 - PROVISIONAL banner → `.colophon` (verbatim content).
 - Empty state ("No live frames loaded") → paper plate + `.colophon` language.
 - Bottom cadence paragraph keeps the five-date Anak Krakatau list verbatim but
@@ -40,25 +39,13 @@ will read: `/method` — the honesty register, written for outsiders.
 - Logic (frames derivation, `scanFrameDates` presets, `isKrakatauSite` phase
   gating, visibility playback, exact-date refusal) is **untouched** — styling only.
 
-### `components/TimeReview.tsx` — demo path, same language
-Demo banner → `.colophon` (verbatim: "Demo visualization — not NISAR
-    observations…"); frames/controls restyled consistently; no logic changes.
+### Procedural `TimeReview.tsx` — retired on 2026-11-15
+The procedural player, frame routes and associated tests were removed. The
+current Time Machine reads installed site manifests and exact observation dates.
 
-### NEW `app/method/page.tsx` — “Method & honesty register” (REDESIGN_GUIDE §6 `/method`)
-Sections 01–06 exactly as the guide specifies. Rules:
-- **Never** claim a real observation was built, processed or verified. The
-  Anak Krakatau build is documented as *planned, not executed*; Gate 2 pending.
-- Every granule detail (CRID `P05023`, dates, orbit/frame, HH/HV ascending
-  frame 010, ≈24.27 GB, collection `NISAR_L2_GCOV_PROVISIONAL_V1`) must match
-  `agent-team/PLAN.md`'s inventory table and `docs/ANAK_KRAKATAU_VM_BUILD.md`
-  on your hand-in SHA — re-read both; if any detail drifted, say so in the report
-  and present both.
-- Maturity is **PROVISIONAL** — write "not validated, not reviewed" everywhere
-  it matters. No superlatives. No "first ever".
-- `/method` links must be relative for repo docs (`/docs/...` is not routable —
-  link nothing to nonexistent routes; instead mention doc paths as mono text).
-  External links (ASF search, NASA Worldview, GitHub repo) may be real `<a>` tags.
-- Static server component (no `use client`), ships zero client JS beyond the shell.
+### `/method` — current short summary
+The page has two sections: Observations and Products. It summarizes the
+installed radar layers and links to NASA Worldview for event context.
 
 ### Method nav link — ANNOUNCE (one announced append to a 07-owned file)
 Add `{ href: "/method", label: "Method" }` to the `LINKS` array in
@@ -82,12 +69,10 @@ Machine). No client JS.
   the README says nothing about the frontend depending on it, leave it alone.
   Deleting the JSON outright is **not** authorized this round.
 
-## Hard rules
+## Historical integration constraints
 No changes to 07 files except the announced one-line nav append. No changes to
-08 files. No new dependencies. Honesty copy verbatim wherever it exists today
-(list in report). No InSAR/deformation/coherence claims anywhere — the word
-"proposed" stays. Tests updated only for deliberately changed copy, and you
-say exactly which assertions moved.
+08 files. No new dependencies. InSAR/deformation/coherence remains a proposed
+capability. Tests should reflect current exact-date and manifest-backed playback.
 
 ## Verification gates (paste outputs)
 

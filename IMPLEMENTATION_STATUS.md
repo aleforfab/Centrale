@@ -125,7 +125,7 @@ This document tracks the implementation progress of the CODEX_PLAN.md tasks.
 - [x] StaticFiles at /products and CORS for tiles
 - [x] TestClient tests for products, tiles, and unknown sites
 
-### T3.2: Honest data status ✅
+### T3.2: NISAR data status ✅
 - [x] Compute nisar_ready from PRODUCTS_DIR
 - [x] Update /health and /api/data-status
 - [x] Remove hardcoded false status

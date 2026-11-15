@@ -5,9 +5,9 @@ Branch: `feat/insar-phase-chain` from `origin/main` @ `037f42c`. Read
 
 ## Why
 
-The product question on interferometry was answered "yes, but honest": GCOV is
-detected, radiometrically terrain-corrected backscatter — it carries **no
-interferometric phase**. A real InSAR feature needs phase-capable products
+The product question on interferometry was answered "yes, with constraints":
+GCOV is detected, radiometrically terrain-corrected backscatter — it carries
+**no interferometric phase**. A real InSAR feature needs phase-capable products
 (SLC/GUNW-style) or an external interferogram service. Until a chain producing
 coherence/interferogram/LOS-displacement outputs passes verification and
 scientific review, the UI must keep saying **proposed** and must not display
@@ -64,7 +64,7 @@ no result is displayed.
      "reason": "…why not available: phase-capable products + review required…",
      "chain": ["coregistration","topo-removal","coherence","filtering","unwrap","atmos-screening","los-scaling"],
      "requirements": ["SLC/GUNW or HyP3","DEM","scientific review"]
-   }`. Always 200, honest, static. No compute endpoint. Register the router in
+   }`. Always 200; returns static status only. No compute endpoint. Register the router in
    `main.py` with **one announced append** (see CONTRACT §1).
 3. `docs/INSAR.md` — source options (GUNW vs SLC chain vs HyP3), algorithm notes,
    verification protocol (two real same-stack pairs, coherence maps, residual
@@ -90,6 +90,6 @@ no result is displayed.
 ## Done when
 
 `ruff check . --output-format concise` clean; `pytest -q` green (paste output,
-including the new insar tests); `/api/insar/status` returns the honest static
+including the new insar tests); `/api/insar/status` returns its static
 payload (show it); report at `agent-team/reports/03-insar-chain.md` pushed with
 the branch.

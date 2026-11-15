@@ -36,7 +36,7 @@ git rev-parse HEAD                # RECORD THIS; it is what you are running
    - `/time-machine`: press ▶ — frames must swap **without flash** (the round-2
      visibility-toggle fix); exact-date input refuses non-installed dates; scan
      window accepts your own dates.
-   - `/method` renders (masthead, honesty register, P05023 table).
+   - `/method` renders (masthead, method summary, P05023 source details).
    - A bogus route shows the paper 404 plate.
    - Fonts: Archivo/IBM Plex Mono load from Google Fonts (runtime @import) —
      needs egress from the viewing browser; page still works with fallbacks.

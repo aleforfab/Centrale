@@ -120,7 +120,7 @@ The job response also carries `result` (the same payload the old synchronous
 endpoint returned) and `error` on failure, so no extra request is needed after
 completion.
 
-## Guards and honest failure modes
+## Guards and failure responses
 
 - **Opt-out.** Set `ENABLE_LIVE_FETCH=false` to force precomputed-only mode;
   `POST /api/nisar/fetch` then returns 404 rather than silently starting a

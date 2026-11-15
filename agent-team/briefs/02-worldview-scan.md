@@ -1,19 +1,16 @@
 # Brief 02 — Time Machine: real live fetch + Worldview-style UI (frontend)
 
+> Historical brief. On 2026-11-15 the procedural scan routes and standalone player were removed. The current page uses installed manifests for exact-date playback and offers live fetch as an explicit action.
+
 Branch: `feat/worldview-time-machine` from `origin/main` @ `037f42c`. Read
 `agent-team/CONTRACT.md` first; it binds. Repo: `aleforfab/Centrale`.
 
 ## Why
 
-The audit (`docs/FULL_FEATURE_AUDIT.md`) found the Time Machine scan button calls
-local `POST /tm/scan`, which returns eight **procedural** SVG frames — it never
-reaches ASF, `/api/nisar/fetch`, or the processing pipeline. The installed
-synthetic site works for the dashboard path but the flagship time interaction is
-a simulation presented next to real-looking dates. This slice makes the Time
-Machine default to a real, credentialed live-fetch scan for Anak Krakatau (with
-the procedural mode kept strictly as an explicitly labelled fallback), and adds a
-NASA-Worldview-inspired time animation + before/after slider over the **real
-backscatter raster tiles** the pipeline builds.
+The 2026-11-14 audit found that the then-current Time Machine used local
+procedural SVG routes. That implementation was retired on 2026-11-15. The
+current page loads installed site manifests, plays exact dated backscatter
+observations, and provides backend live fetch as an explicit action.
 
 ## Facts on the ground
 
@@ -25,8 +22,8 @@ backscatter raster tiles** the pipeline builds.
   **read them first**, the exact request/response schema and job states are
   defined there; do not invent fields). `GET /api/nisar/fetch/jobs`,
   `GET /api/nisar/fetch/jobs/{job_id}`, `POST .../cancel`. Without Earthdata
-  credentials the fetch returns `503` with credential guidance — that is the
-  honest "blocked" state to surface.
+  credentials the fetch returns `503` with credential guidance; present this
+  as a blocked state.
 - Job states include: queued, running, succeeded, failed, cancelled — plus
   credential/size-limit error surfacing from the job payload and `ENABLE_LIVE_FETCH`.
 - On success the site manifest lists layers; only `kind: "backscatter"` layers
@@ -59,9 +56,8 @@ backscatter raster tiles** the pipeline builds.
      (`/api/sites/<id>/...`) to obtain real layers and dates.
    - Deep-link the resulting site into the Time Machine view (router navigation or
      shared state — pick the pattern the codebase already uses).
-   - Procedural `/tm/scan` POST remains only as an explicit
-     "demo (not observations)" fallback path, reachable behind a labelled toggle
-     or button — never the default, never unlabelled.
+   - The procedural `/tm/scan` route and demo fallback were removed on
+     2026-11-15. The current implementation uses installed manifests for playback.
 3. **Manifest → raster frames adapter** (`lib/scanFrames.ts`, new):
    - Input: site manifest; Output: ordered frames `{date, layers: kind=backscatter
      raster tiles (XYZ template URL), polarization, granule, crid, maturity, source}`.
@@ -76,13 +72,10 @@ backscatter raster tiles** the pipeline builds.
    locked cameras). Plain language; progressive disclosure for granule/CRID/provenance.
 5. **States**: queued / running (with progress + cancel) / succeeded / failed /
    cancelled / credential-error ("Earthdata credentials are not configured on the
-   backend — see docs/LIVE_FETCH.md") / size-limit exceeded / demo fallback —
-   each distinct, plain-language, never fake progress.
-6. **Honesty copy**: banner when in procedural demo mode: "Demo visualization — not
-   NISAR observations, not a real change, not evidence of anything." Real mode:
-   show the provenance block (dates, pol, product kind, CRID, maturity
-   PROVISIONAL, granule names, source = ASF/NASA Earthdata) visibly or behind one
-   tap ("Exact acquisitions").
+   backend — see docs/LIVE_FETCH.md") / size-limit exceeded; display only
+   backend-reported progress.
+6. **Acquisition details**: show dates, polarization, product kind, CRID,
+   maturity, granule names and ASF/NASA Earthdata source in the provenance panel.
 7. Optional (only if green early): retire dead modules audit listed —
    `components/DanceChart.tsx`, `TimeScrubber.tsx`, `ControlPanel.tsx`,
    `AsfGranules.tsx`, `lib/applications.ts`, `lib/sourceRegister.ts`,
@@ -98,16 +91,13 @@ backscatter raster tiles** the pipeline builds.
 - Keep `/applications`, `/setup` retired (404). Keep nav to Dashboard / Before-after / Time Machine.
 - No Mapbox token changes; keep using `lib/mapboxToken.ts`.
 - Playback uses only `kind: "backscatter"` layers; never difference/change-mask.
-- No "validated/verified/scientific" claims; PROVISIONAL maturity stays visible.
-- Typecheck/tests/build must pass; existing 65+ frontend tests must stay green
-  (update count in report; update `tests/time-machine.test.ts` /
-  `tests/pages.test.tsx` to the new flow, never by deleting assertions that
-  encode honesty rules — adapt them to the same contract).
+- Typecheck/tests/build must pass; update the report with the current test count
+  and retain coverage for date selection and manifest-backed playback.
 
 ## Done when
 
 `npm ci && npm run typecheck && npm test && npm run build` all green (paste
-output); a screenshot-worthy description of the Time Machine in both modes;
+output); a screenshot-worthy description of manifest-backed Time Machine playback;
 report at `agent-team/reports/02-worldview-scan.md` pushed with the branch.
 Verification here is frontend build + tests only — the real end-to-end ASF build
 is a VM step and is out of scope; do not claim otherwise.

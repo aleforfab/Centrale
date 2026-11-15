@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { SiteManifest } from "@/lib/types";
 const state = vi.hoisted(() => ({ maps: [] as any[] }));
-vi.mock("@/components/Map", () => ({ Map: ({ falseColor }: { falseColor: boolean }) => <div>Overlay palette {falseColor ? "on" : "off"}</div> }));
+vi.mock("@/components/Map", () => ({ mapStyleForView: (view: string) => view === "optical" ? "optical-style" : "nisar-style" }));
 vi.mock("mapbox-gl", () => {
   class MockMap {
     sources: Record<string, any> = {}; layers: Record<string, any> = {};
@@ -31,14 +31,15 @@ const manifest: SiteManifest = {
   ],
 };
 afterEach(cleanup);
-it("applies the same display palette to both observations and the overlay background", () => {
+it("applies the same display palette to both comparison observations", () => {
   state.maps.length = 0;
-  render(<ComparisonViewer manifest={manifest} pairId="pair" pol="HH" showProducts />);
+  render(<ComparisonViewer manifest={manifest} pairId="pair" pol="HH" />);
   fireEvent.click(screen.getByRole("button", { name: "False colour: off" }));
   expect(state.maps[0].setPaintProperty).toHaveBeenCalledWith("comparison-before-raster", "raster-color", expect.any(Array));
   expect(state.maps[1].setPaintProperty).toHaveBeenCalledWith("comparison-after-raster", "raster-color", expect.any(Array));
-  expect(screen.getByText("Overlay palette on")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "False colour: on" })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "False colour: on" }));
   expect(state.maps[0].setPaintProperty).toHaveBeenLastCalledWith("comparison-before-raster", "raster-color", undefined);
   expect(state.maps[1].setPaintProperty).toHaveBeenLastCalledWith("comparison-after-raster", "raster-color", undefined);
+  expect(screen.getByRole("button", { name: "False colour: off" })).toBeTruthy();
 });

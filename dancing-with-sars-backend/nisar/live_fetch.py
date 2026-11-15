@@ -46,7 +46,7 @@ VALID_POLARIZATIONS = {"HH", "HV", "VH", "VV"}
 
 
 class LiveFetchError(RuntimeError):
-    """Raised when a live fetch cannot be completed honestly."""
+    """Raised when a live fetch cannot be completed."""
 
 
 class LiveFetchDisabled(LiveFetchError):
@@ -133,11 +133,13 @@ def _choose_stack(
     polarizations: list[str],
 ) -> dict[str, Any]:
     """Pick the stack with the most distinct dates that supports the requested pols."""
+    requested_pols = {str(pol).upper() for pol in polarizations}
     groups: dict[tuple[int, str, int], dict[str, dict[str, Any]]] = {}
     for granule in granules:
-        if granule.get("maturity") != maturity:
+        if str(granule.get("maturity", "")).upper() != maturity.upper():
             continue
-        if not set(polarizations).issubset(set(granule.get("polarizations") or [])):
+        available_pols = {str(pol).upper() for pol in (granule.get("polarizations") or [])}
+        if not requested_pols.issubset(available_pols):
             continue
         try:
             key = (int(granule["track"]), str(granule["direction"]), int(granule["frame"]))
@@ -150,10 +152,16 @@ def _choose_stack(
 
     usable = [(len(dates), key, dates) for key, dates in groups.items() if len(dates) >= 2]
     if not usable:
+        polarization_label = ", ".join(sorted(requested_pols)) or "the selected polarization"
+        channels = " or ".join(sorted(requested_pols))
+        recovery = (
+            f"Try one channel at a time ({channels}) or widen the date range."
+            if len(requested_pols) > 1
+            else "Try widening the date range or selecting a different polarization."
+        )
         raise LiveFetchError(
-            "ASF returned no single track/frame/direction stack with at least two "
-            f"dates carrying polarizations {polarizations}. Try a wider date range, "
-            "a larger bbox inside one granule, or different polarizations."
+            "ASF did not return a single track/frame/direction stack with at least "
+            f"two dates for polarization(s) {polarization_label}. {recovery}"
         )
     # Most dates wins; the key makes ties deterministic.
     _, (track, direction, frame), dates = max(usable, key=lambda item: (item[0], item[1]))

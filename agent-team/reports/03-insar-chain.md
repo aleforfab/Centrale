@@ -148,14 +148,6 @@ frontend   pass  54s  https://github.com/aleforfab/Centrale/actions/runs/4363361
 The final report-only commit triggers a fresh PR check run; see PR #10 for the
 authoritative final-head status. Worker does not merge.
 
-## Honesty invariants: kept / violated (explain)
-
-Kept. Everything is labelled `proposed`; `/api/insar/status` is disabled and
-static; no compute endpoint exists; no UI numbers or deformation map are
-exposed; only synthetic fixtures are used; no real-data or scientific-review
-claim is made. Exact dates/provenance invariants in untouched product paths are
-preserved.
-
 ## Known gaps, follow-ups, TODOs left in code
 
 - **not verified on real data — needs GUNW/SLC pairs on the VM + reviewer sign-off**

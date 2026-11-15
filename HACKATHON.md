@@ -7,9 +7,9 @@
 ## One-line pitch
 
 For curious people and analysts, **Dancing with the SARs** shows what NASA–ISRO
-NISAR radar saw when Anak Krakatau changed shape in September 2026 — as an
-honest, provenance-linked, Worldview-style time exploration — so that anyone can
-see a real SAR time series of a real eruption without being a SAR expert.
+NISAR radar observed around Anak Krakatau in September 2026 — as a
+provenance-linked, Worldview-style time exploration — so that anyone can explore
+a real SAR time series without being a SAR expert.
 
 ## Demo path (what a judge sees)
 
@@ -18,7 +18,7 @@ see a real SAR time series of a real eruption without being a SAR expert.
 2. `/time-machine` → **live-fetch scan** against ASF via FastAPI
    (`POST /api/nisar/fetch` + job polling) with Worldview-style 12-day playback
    and before/after slider (Aug 13 → Sep 30 2026 stack), blocked/error state if
-   credentials are missing, procedural demo explicitly labelled as fallback only.
+   credentials are missing; no procedural demo is offered.
 3. Every frame shows exact date, polarization, product kind, track/frame, granule,
    CRID, maturity (PROVISIONAL) and provenance; gamma-to-sigma normalization is
    applied and labelled; interferometry is offered only as a clearly labelled
@@ -29,7 +29,7 @@ see a real SAR time series of a real eruption without being a SAR expert.
 - **Must:** live-fetch wiring + job polling + manifest raster adapter;
   gamma-to-sigma normalization with provenance; Worldview-style animation +
   before/after slider on real tile layers; VM build runbook for the real
-  Anak Krakatau site; draft PR; honesty invariants intact.
+  Anak Krakatau site; draft PR.
 - **Optional:** VM deployment execution (needs explicit go + credentials + network),
   shared job store for multi-worker backend, Pixel-level browser test on the VM,
   retiring dead frontend modules (lane: frontend).
@@ -57,7 +57,7 @@ not approved yet. Browser tests: local servers + (on VM) real browser.
   ruff clean; backend 157 passed; build OK.
 - Phase 5 (havu.cc-inspired rebrand, "The SAR Field Catalogue"): merged
   2026-11-15 — #13/#17 round setups, #18 Time Machine Field Log + `/method`
-  honesty register + 404, #19 design foundation (paper tokens, masthead), #20
+  provenance page + 404, #19 design foundation (paper tokens, masthead), #20
   Observation Plate + Diptych. Verified: SSR smoke on all routes; `/method`
   and custom 404 in build; `/`, `/compare`, `/time-machine`, `/method` 200.
   Browser-level check still pending — needs the VM rebuild below.
@@ -78,8 +78,7 @@ not approved yet. Browser tests: local servers + (on VM) real browser.
 - No Earthdata token/`.env`/granules/products/tiles/`.next`/`node_modules` in git.
 - No network route to ASF/Earthdata from this sandbox (verified 2026-11-14) →
   the **real Anak Krakatau download (~24 GB) runs only on the VM**; this sandbox
-  verifies everything with synthetic fixtures / mocked live fetch, honestly labelled.
+  verifies everything with clearly labelled synthetic fixtures / mocked live fetch.
 - NISAR Provisional GCOV is what exists over the AOI for Aug–Sep 2026
   (see `agent-team/PLAN.md` §Real-granule inventory). Validated `NISAR_L2_GCOV_V1`
   shows only a 2026-10-24 granule over the AOI so far; `NISAR_L2_GCOV_BETA_V1`: none.
-- Honesty invariants (see `agent-team/CONTRACT.md`) override convenience.

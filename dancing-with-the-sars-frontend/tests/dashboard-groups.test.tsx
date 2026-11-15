@@ -21,12 +21,12 @@ afterEach(cleanup);
 it("groups installed products and starts with the newest observation", async () => {
   render(<Home />);
   expect((await screen.findByTestId("map-layers")).textContent).toBe("observation-2026-09-30");
-  expect(screen.getByText("Observations (5)")).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Radar observations" })).toBeTruthy();
   expect(screen.getByText("Measured change (4 pairs)")).toBeTruthy();
   expect(screen.getAllByText("Manifest caveat").length).toBeGreaterThan(0);
   fireEvent.click(screen.getByText("2026-08-13 → 2026-08-25"));
   const drawMask = screen.getByLabelText("Draw 6 dB mask 2026-08-13 → 2026-08-25");
   fireEvent.click(drawMask);
   expect(screen.getByTestId("map-layers").textContent).toBe("mask-pair-0-6");
-  expect(screen.getByText(/Masks are categorical/)).toBeTruthy();
+  expect(screen.getByText("Blue = lower return · Red = higher return.")).toBeTruthy();
 });

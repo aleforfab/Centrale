@@ -4,10 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FeatureCollection, Polygon } from "geojson";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { DEFAULT_BBOX, isValidBbox } from "@/lib/timeMachine";
+import { DEFAULT_BBOX, isValidBbox, type Bbox } from "@/lib/region";
 import { getMapboxToken, hasMapboxToken } from "@/lib/mapboxToken";
 
-export type Bbox = [number, number, number, number];
+export type { Bbox } from "@/lib/region";
 
 const MAPBOX_TOKEN = getMapboxToken();
 const HAS_MAPBOX_TOKEN = hasMapboxToken();
@@ -329,8 +329,7 @@ export function RegionSelector({ initialBbox = DEFAULT_BBOX, onChange }: RegionS
         </p>
       )}
       <p className="footnote tm-muted mt-3">
-        The Mapbox GL canvas provides the region geometry. This prototype uses procedural frames, so the selected
-        bbox changes the query and viewport, not real satellite measurements.
+        The selected region sets the area used for a live fetch and the map extent.
         {usingFallback && " A local dark grid stands in for the basemap because no URL-restricted Mapbox token is configured in this preview."}
       </p>
     </section>

@@ -195,6 +195,48 @@ def test_catalog_search_rejects_invalid_query_even_on_hit(tmp_path, monkeypatch)
 # On-demand product fetch
 # ---------------------------------------------------------------------------
 
+def test_choose_stack_supports_hh_and_hv_from_dual_pol_granules():
+    granules = [
+        {
+            "granule": f"NISAR_L2_PR_GCOV_{cycle:03d}_010_A_175_4005_DHDH_A_{day}T223952_{day}T224026_P05023_N_F_J_001.h5",
+            "track": 10,
+            "frame": 175,
+            "direction": "A",
+            "maturity": "PROVISIONAL",
+            "date": f"{day[:4]}-{day[4:6]}-{day[6:8]}",
+            "polarizations": parse_granule_name(
+                f"NISAR_L2_PR_GCOV_{cycle:03d}_010_A_175_4005_DHDH_A_{day}T223952_{day}T224026_P05023_N_F_J_001.h5"
+            ).polarizations(),
+        }
+        for cycle, day in ((28, "20260813"), (29, "20260825"))
+    ]
+
+    selection = live_fetch._choose_stack(granules, MATURITY, ["HH", "HV"])
+
+    assert selection["dates"] == ["20260813", "20260825"]
+    assert selection["granules"] == granules
+    assert live_fetch._choose_stack(granules, MATURITY, ["HV"])["dates"] == selection["dates"]
+
+
+def test_choose_stack_reports_a_readable_single_pol_recovery_hint():
+    granules = [
+        {"track": 10, "frame": 175, "direction": "A", "maturity": MATURITY, "date": "2026-08-13", "polarizations": ["HH"]},
+        {"track": 10, "frame": 175, "direction": "A", "maturity": MATURITY, "date": "2026-08-25", "polarizations": ["HH"]},
+    ]
+
+    with pytest.raises(
+        live_fetch.LiveFetchError,
+        match="single track/frame/direction stack.*polarization\\(s\\) HV.*widening the date range",
+    ):
+        live_fetch._choose_stack(granules, MATURITY, ["HV"])
+
+    with pytest.raises(
+        live_fetch.LiveFetchError,
+        match=r"one channel at a time \(HH or HV\) or widen the date range",
+    ):
+        live_fetch._choose_stack(granules, MATURITY, ["HH", "HV"])
+
+
 def test_fetch_products_returns_cached_site_without_network(tmp_path, monkeypatch):
     products = tmp_path / "products"
     _write_manifest(products, _site_id())

@@ -11,7 +11,7 @@ import {
   usablePairs,
 } from "@/lib/comparison";
 import type { SiteManifest } from "@/lib/types";
-import { Map, type MapView } from "@/components/Map";
+import { mapStyleForView, type MapView } from "@/components/Map";
 import { api } from "@/lib/api";
 import { resolveTileUrl } from "@/lib/tileUrl";
 import { setObservationPalette } from "@/lib/falseColor";
@@ -20,18 +20,6 @@ import { getMapboxToken, hasMapboxToken } from "@/lib/mapboxToken";
 const MAPBOX_TOKEN = getMapboxToken();
 mapboxgl.accessToken = MAPBOX_TOKEN;
 const HAS_MAPBOX_TOKEN = hasMapboxToken();
-
-const FALLBACK_STYLE = {
-  version: 8,
-  sources: {},
-  layers: [
-    {
-      id: "dark-background",
-      type: "background",
-      paint: { "background-color": "#0D0C0A" },
-    },
-  ],
-} as unknown as mapboxgl.Style;
 
 /*
  * Visual vocabulary — REDESIGN_GUIDE §5/§6. The catalogue classes (`.plate*`,
@@ -57,7 +45,8 @@ export interface ComparisonViewerProps {
   manifest: SiteManifest;
   pairId: string;
   pol: string;
-  showProducts?: boolean;
+  view?: MapView;
+  setView?: (view: MapView) => void;
   falseColor?: boolean;
   onFalseColorChange?: (enabled: boolean) => void;
 }
@@ -74,29 +63,27 @@ function camerasMatch(a: mapboxgl.Map, b: mapboxgl.Map): boolean {
   );
 }
 
-export function ComparisonViewer({ manifest, pairId, pol, showProducts = false, falseColor: controlledColor, onFalseColorChange }: ComparisonViewerProps) {
+export function ComparisonViewer({ manifest, pairId, pol, view: controlledView, setView: onViewChange, falseColor: controlledColor, onFalseColorChange }: ComparisonViewerProps) {
   const [localColor, setLocalColor] = useState(false);
   const falseColor = controlledColor ?? localColor;
   const setFalseColor = (enabled: boolean) => { setLocalColor(enabled); onFalseColorChange?.(enabled); };
   const colorRef = useRef(falseColor);
   colorRef.current = falseColor;
-  const [product, setProduct] = useState("difference");
-  const [view, setView] = useState<MapView>("sar");
+  const [localView, setLocalView] = useState<MapView>("sar");
+  const view = controlledView ?? localView;
+  const setView = (next: MapView) => { setLocalView(next); onViewChange?.(next); };
   const [reveal, setReveal] = useState(50);
   const [mapError, setMapError] = useState<string | null>(null);
   const beforeContainer = useRef<HTMLDivElement>(null);
   const afterContainer = useRef<HTMLDivElement>(null);
   const beforeMap = useRef<mapboxgl.Map | null>(null);
   const afterMap = useRef<mapboxgl.Map | null>(null);
+  const mountedView = useRef<MapView | null>(null);
 
   const result = useMemo(() => buildComparison(manifest, pairId, pol), [manifest, pairId, pol]);
   const selection = result.ok ? result.selection : null;
   const availablePols = useMemo(() => observationPolarizations(manifest), [manifest]);
   const pairs = useMemo(() => usablePairs(manifest), [manifest]);
-
-  const productLayers = useMemo(() => manifest.layers.filter((layer) => layer.pair_id === pairId && (layer.pol ?? "").toUpperCase() === pol.toUpperCase() && (layer.kind === "difference" || layer.kind === "change_mask")), [manifest.layers, pairId, pol]);
-  const chosenProduct = productLayers.find((layer) => product === "difference" ? layer.kind === "difference" : layer.kind === "change_mask" && layer.threshold_db === Number(product));
-  const overlayLayers = useMemo(() => chosenProduct && selection ? [chosenProduct, selection.after.layer] : [], [chosenProduct, selection]);
 
   const beforeLayerId = selection?.before.layer.id;
   const afterLayerId = selection?.after.layer.id;
@@ -109,7 +96,7 @@ export function ComparisonViewer({ manifest, pairId, pol, showProducts = false, 
 
     const bbox = manifest.site.bbox;
     const options: Omit<mapboxgl.MapOptions, "container"> = {
-      style: HAS_MAPBOX_TOKEN ? "mapbox://styles/mapbox/dark-v11" : FALLBACK_STYLE,
+      style: mapStyleForView(view),
       attributionControl: false,
     };
     let first: mapboxgl.Map;
@@ -123,6 +110,7 @@ export function ComparisonViewer({ manifest, pairId, pol, showProducts = false, 
     }
     beforeMap.current = first;
     afterMap.current = second;
+    mountedView.current = view;
 
     const link = (source: mapboxgl.Map, target: mapboxgl.Map) => {
       source.on("move", () => {
@@ -162,8 +150,27 @@ export function ComparisonViewer({ manifest, pairId, pol, showProducts = false, 
     };
   }, [manifest.site.bbox]);
 
+  // Keep both comparison maps on the same context style as the timeline map.
+  // A Mapbox style change clears custom raster layers; the source effect below
+  // re-installs the exact before/after rasters once the new style has loaded.
+  useEffect(() => {
+    const instances = [beforeMap.current, afterMap.current];
+    if (instances.some((instance) => !instance) || mountedView.current === view) return;
+    mountedView.current = view;
+    const style = mapStyleForView(view);
+    for (const instance of instances) {
+      if (!instance) continue;
+      try {
+        instance.setStyle(style);
+      } catch (error) {
+        setMapError(error instanceof Error ? error.message : "The basemap could not be changed.");
+      }
+    }
+  }, [view]);
+
   // Keep the two raster sources pointing at the exact layers for the selection.
   useEffect(() => {
+    const cleanups: Array<() => void> = [];
     const sources: Array<[mapboxgl.Map | null, string, string | undefined, string]> = [
       [beforeMap.current, "comparison-before", beforeLayerId, "before"],
       [afterMap.current, "comparison-after", afterLayerId, "after"],
@@ -173,7 +180,9 @@ export function ComparisonViewer({ manifest, pairId, pol, showProducts = false, 
       const layer = manifest.layers.find((item) => item.id === layerId);
       if (!layer) continue;
       const tiles = [resolveTileUrl(layer.tile_url_template, api.baseUrl)];
+      let cancelled = false;
       const apply = () => {
+        if (cancelled || !instance.isStyleLoaded()) return;
         const existing = instance.getSource(sourceId) as mapboxgl.RasterTileSource | undefined;
         if (existing) {
           existing.setTiles(tiles);
@@ -196,9 +205,14 @@ export function ComparisonViewer({ manifest, pairId, pol, showProducts = false, 
         setObservationPalette(instance, `comparison-${side}-raster`, colorRef.current);
       };
       if (instance.isStyleLoaded()) apply();
-      else instance.once("load", apply);
+      else instance.once("style.load", apply);
+      cleanups.push(() => {
+        cancelled = true;
+        instance.off("style.load", apply);
+      });
     }
-  }, [beforeLayerId, afterLayerId, manifest.layers]);
+    return () => { cleanups.forEach((cleanup) => cleanup()); };
+  }, [beforeLayerId, afterLayerId, manifest.layers, view]);
 
   useEffect(() => {
     const cleanups: Array<() => void> = [];
@@ -213,7 +227,7 @@ export function ComparisonViewer({ manifest, pairId, pol, showProducts = false, 
       cleanups.push(() => { instance.off("idle", apply); });
     }
     return () => { cleanups.forEach((cleanup) => cleanup()); };
-  }, [falseColor, beforeLayerId, afterLayerId]);
+  }, [falseColor, beforeLayerId, afterLayerId, view]);
 
   if (!result.ok) {
     return (
@@ -239,8 +253,21 @@ export function ComparisonViewer({ manifest, pairId, pol, showProducts = false, 
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
       <section className="min-w-0 xl:col-span-8" aria-label="Before and after imagery">
         <div className="mb-3 flex flex-wrap items-center gap-3">
+          <div className={`${IMAGERY_CHIP} flex gap-0.5 p-0.5`} role="group" aria-label="Map view">
+            {(["optical", "sar"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={view === mode}
+                onClick={() => setView(mode)}
+                className={`rounded-[1px] px-2.5 py-1.5 text-[10px] uppercase leading-none tracking-[0.14em] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF8A3D] ${view === mode ? "bg-[#F5F3EC] text-[#16130F]" : "text-[rgba(245,243,236,0.72)] hover:text-[#F5F3EC]"}`}
+              >
+                {mode === "optical" ? "Optical context" : "NISAR"}
+              </button>
+            ))}
+          </div>
           <button type="button" className="tm-button" aria-pressed={falseColor} onClick={() => setFalseColor(!falseColor)}>False colour: {falseColor ? "on" : "off"}</button>
-          <span className={FOOTNOTE}>Observation display palette only: purple = weaker, pale yellow = stronger brightness. Not a colour composite; difference and mask colours stay unchanged.</span>
+          <span className={FOOTNOTE}>Observation display palette: purple through mauve to cream, from lower to higher radar return.</span>
         </div>
         <div className={PLATE}>
           <div className="relative h-[26rem] overflow-hidden bg-[#0D0C0A] sm:h-[32rem]">
@@ -314,23 +341,7 @@ export function ComparisonViewer({ manifest, pairId, pol, showProducts = false, 
           </div>
         </div>
 
-        {showProducts && <section className="mt-5" aria-label="Measured backscatter change">
-          <h2 className={`${LABEL} mb-2`}>Measured backscatter change, exact dates · {active.before.date} → {active.after.date}</h2>
-          <label className="field block mb-3">Installed product <select value={product} onChange={(e) => setProduct(e.target.value)}>
-            <option value="difference">Difference · finish minus start (dB)</option>
-            {[6, 3, 2].map((threshold) => <option key={threshold} value={threshold} disabled={!productLayers.some((item) => item.kind === "change_mask" && item.threshold_db === threshold)}>{threshold} dB mask</option>)}
-          </select></label>
-          {chosenProduct ? <><div className="h-[26rem]"><Map bbox={manifest.site.bbox} layers={overlayLayers} view={view} setView={setView} falseColor={falseColor} onFalseColorChange={setFalseColor} /></div>
-            <p className={`${FOOTNOTE} mt-2`}>{chosenProduct.kind === "change_mask" ? "Categorical mask: blue = lower return, red = higher return." : "Difference: blue = lower return, neutral = 0 dB, red = higher return. Finish minus start."} The 2 dB mask can be dominated by open-water speckle.</p></> : <p className={COLOPHON}>This product is not installed for the selected pair and polarization.</p>}
-        </section>}
-
-        {mapError && (
-          <p className={`${COLOPHON} mt-3 [overflow-wrap:anywhere]`} role="alert">
-            Basemap message: {mapError}
-          </p>
-        )}
-
-        <label className={`${LABEL} mt-4 block`}>
+        <label className={`${LABEL} mt-3 block`}>
           Reveal before and after imagery — {clamped.toFixed(0)}%
           <input
             type="range"
@@ -344,10 +355,14 @@ export function ComparisonViewer({ manifest, pairId, pol, showProducts = false, 
           />
         </label>
         <p className={`${FOOTNOTE} mt-2`}>
-          Use the slider below to reveal the later date; clicking or dragging on the imagery does not change the
-          view. Apparent brightness also depends on the display stretch applied to each layer, not only on the
-          surface.
+          Move the slider to reveal the later date; pan or zoom either map to update both views. Apparent brightness
+          also depends on the display stretch applied to each layer, not only on the surface.
         </p>
+        {mapError && (
+          <p className={`${COLOPHON} mt-3 [overflow-wrap:anywhere]`} role="alert">
+            Basemap message: {mapError}
+          </p>
+        )}
       </section>
 
       <aside className="flex min-w-0 flex-col gap-5 xl:col-span-4">

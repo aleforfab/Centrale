@@ -14,7 +14,7 @@ playback defect remain now that the tile-URL fix (PR #11) landed:
 2. Changing frames during Time Machine playback **reloads the raster each tick**
    — the frame visibly closes and reopens ("as if the image reload every time").
 3. The operator cannot see the site's footprint or scale; the product claims to
-   be location-honest but doesn't draw the location.
+   be location-aware but doesn't draw the location.
 
 ## Ground rules (from the maintainer's issue, verbatim intent)
 

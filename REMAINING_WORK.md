@@ -197,7 +197,7 @@ This document lists all tasks that still need to be completed to transform the p
 
 ---
 
-#### 🟡 T3.2: Honest Data Status
+#### 🟡 T3.2: NISAR Data Status
 **Status**: ✅ IMPLEMENTED - readiness is derived from installed NISAR manifests
 
 **Task**: Compute `nisar_ready` from products directory dynamically
@@ -422,7 +422,7 @@ Only after Phases 1-4 are complete and verified.
 1. **T2.2**: Implement export.py (COG, tiles, JSON)
 2. **T2.3**: Complete build-site and verify CLI
 3. **T3.1**: Product-serving API endpoints
-4. **T3.2**: Honest data status computation
+4. **T3.2**: NISAR data status computation
 5. **T3.3**: Gate Sentinel-1 fallback
 
 ### 🟡 P2 - Medium Priority

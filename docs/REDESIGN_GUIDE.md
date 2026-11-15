@@ -16,7 +16,6 @@ accent colour. Reference language: `havu.cc/en` (a Tokyo design studio):
 - fused grotesque display type (sentences set solid, huge, tight tracking)
 - paper/off-white surfaces with near-black ink
 - ruled tables instead of cards; blueprint/diagram identity over decoration
-- "evidence with craft" positioning — which is exactly our honesty invariants
 
 We borrow **language and structure**, never their assets, copy, or name. No
 bilingual JP/EN texture, no marquees across the app, no invented credentials.
@@ -32,7 +31,6 @@ bilingual JP/EN texture, no marquees across the app, no invented credentials.
 | Ruled comparison table | `/method` table: “What the numbers say / what they do not” |
 | Pixels catalogue entries | `/method` colophon: the five PROVISIONAL granules as catalogue rows |
 | FAQ accordions | None. `/method` is plain sections — fewer clicks, less theatre |
-| “Evidence, not vibes” stance | Our honesty invariants, restated visibly on `/method` |
 
 ## 3. Tokens (names are fixed — do not rename)
 
@@ -109,30 +107,22 @@ Grid `1fr / 380px` rail.
 - Viewer plate: `ENTRY 0N — <date>` (Archivo 900), phase tag (small accent caps), frame strip = mono date buttons (active = accent underline), play/pause = `.chapter-button`, timeline = paper-styled range.
 - `EXACT ACQUISITIONS` — `.rule-table` of provenance rows. Missing dates stay `· unavailable`.
 
-### `/method` — Method & honesty register (new route, worker 09)
-Sections 01–06, each with mono index tag:
-01 Why this exists — NASA Space Apps; NISAR L-band GCOV; installed products only; live fetch is operator-side, never implicit.
-02 The data — ASF/Earthdata; `NISAR_L2_GCOV_PROVISIONAL_V1`; five UTC dates (2026-08-13, 08-25, 09-06, 09-18, 09-30), ascending frame 010, HH/HV, CRID `P05023`, maturity **PROVISIONAL** (not validated, not reviewed); ~24.27 GB; the VM runbook is `docs/ANAK_KRAKATAU_VM_BUILD.md`; the download has not been executed in this workspace.
-03 Processing — γ⁰→σ⁰ via `rtcGammaToSigmaFactor` before dB conversion; 3 px smoothing; thresholds 2/3/6 dB; stats are measured outputs; plystack coherence enforced only for tile generation via `nisar.cli verify` (stack match, maturity, tiles present).
-04 What it is not — a cause; an interpolation; validated science; a deformation/InSAR product (**proposed, off-limits until verified on real data**); the synthetic fixture (not a real observation); matched-date optical context (basemap imagery is never the observation).
-05 Known limits — PROVISIONAL maturity; no coherence/displacement; exact dates only; out-of-extent tiles 404 by design; attribution retained.
-06 Provenance — links: ASF granule search, NASA Worldview, `docs/NORMALIZATION.md`, `docs/ANAK_KRAKATAU_VM_BUILD.md`, `agent-team/reports/`. Every external statement carries its date (2026-11-14).
+### `/method` — Method & provenance
+Two compact sections with mono index tags:
+01 Observations — NISAR L-band GCOV, installed dates, polarization, stack and product maturity.
+02 Products — gamma-to-sigma normalization, dB difference layers, threshold masks and source links.
 
 ### 404 — `PAGE NOT IN THE CATALOGUE` + three links (worker 09).
 
 ## 7. Voice
 No exclamation marks. Short declaratives. Numbers before adjectives.
-“The map shows the installed observation.” “This is not a validated result.”
-Honesty copy is never softened, shortened, moved behind a toggle, or recoloured away.
 
-## 8. Hard invariants (all workers)
-All `agent-team/CONTRACT.md` §honesty invariants, plus: no new dependencies;
-CSS variable names fixed; `app/globals.css` and `app/redesign.css` are worker
-07's only stylesheets; **no build-time font fetch** — fonts arrive via runtime
-`@import` in `globals.css`; workers 08/09 never edit 07's files; tests may be
-updated only to match deliberately changed copy (say so in the report); treat
-`reports 04/05/06` known-gaps as fact (e.g. markdown stale note: playback
-presets are already manifest-derived on `main` — do not “fix” it).
+## 8. Implementation constraints
+No new dependencies; CSS variable names fixed; `app/globals.css` and
+`app/redesign.css` are worker 07's only stylesheets; **no build-time font fetch**
+— fonts arrive via runtime `@import` in `globals.css`; workers 08/09 never edit
+07's files; tests may be updated to match changed copy (say so in the report);
+treat reports 04/05/06 known-gaps as historical notes.
 
 ## 9. Merge order & integration
 07 → 09 → 08. Workers rebase on each prior merge if asked. Supervisor runs the

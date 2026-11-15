@@ -148,14 +148,15 @@ after freeze except reverts of visibly broken things.
   Decisions locked (override before workers start or at PR review):
   full visual rebrand; paper-light default; accent `#C2410C` (text) / `#FF8A3D`
   (graphic); Archivo + IBM Plex Mono via runtime @import (no build-time fetch);
-  `/method` honesty register included; 404 restyled; no new deps; NISAR L-band
+  `/method` provenance page included; 404 restyled; no new deps; NISAR L-band
   product copy unchanged; merge order 07 → 09 → 08.
-- Not in round 3: VM rebuild (A2), live-fetch operator guard (A3), Gate 2,
-  `/tm/scan` procedural path internals, backend.
+- Not in round 3 at the time: VM rebuild (A2), live-fetch operator guard (A3),
+  Gate 2 and the procedural Time Machine routes/player. Those routes/player were
+  retired in a later 2026-11-15 follow-up.
 
 ## Round 3 merged & verified (2026-11-15)
 
-- #18 Time Machine Field Log + `/method` honesty register + 404 plate;
+- #18 Time Machine Field Log + `/method` provenance page + 404 plate;
   #19 design foundation (paper tokens, masthead, chapter nav, vocabulary classes);
   #20 Observation Plate + Diptych. Merge order 07 → 09 → 08 respected.
 - Fresh-worktree verification @ `25878e4`: typecheck clean; **65 tests / 9 files**

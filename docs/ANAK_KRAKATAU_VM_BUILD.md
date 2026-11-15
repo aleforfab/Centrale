@@ -164,8 +164,8 @@ use Path A and file a bug.
 4. `/compare` for 2026-08-13 ↔ 2026-09-30: exact dates only, slider reveal only.
 5. `/time-machine` live flow: press “Fetch real observations”, expect instant
    cache hit (Path B primed) or the Path A site; playback steps the five exact
-   dates; provenance disclosure shows granule/CRID/maturity; demo fallback still
-   says it is not an observation.
+   dates; provenance disclosure shows granule/CRID/maturity; the page has no
+   procedural demo fallback.
 6. Browser checklist (the audit’s P1-16): Mapbox basemap renders (or fails
    gracefully with dates/provenance still visible); SAR overlays align; calendar
    refuses non-installed dates; slider-only reveal; playback works; mobile layout
@@ -175,7 +175,7 @@ use Path A and file a bug.
 8. Bookkeeping: append the build receipt (date, SHAs, `verify` output, tile spot
    checks, screenshot links) to `docs/IMPLEMENTATION_VERIFICATION.md` **in a PR**.
 
-## 7. Rollback / honesty
+## 7. Rollback
 
 - Any failure → do not link the site in the UI; the installed synthetic
   `demo-fixture` remains (it always says it is not real). Fix forward; revert via

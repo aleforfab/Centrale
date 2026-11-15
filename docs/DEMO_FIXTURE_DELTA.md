@@ -14,16 +14,15 @@ synthetic rehearsal fixture onto recognisable coastal land at a low-latitude
 site near `~90°E` inside `EPSG:32646`, while keeping `(0, 0)` as the default so
 existing tests and fixtures stay byte-compatible.
 
-## Honesty notice (mandatory)
+## Fixture status
 
-**The location is arbitrary; the data remains synthetic; it is not a real
-observation, not a real change, and not evidence of anything about the
-Sundarbans, Bangladesh or the Ganges–Brahmaputra delta.**
+The location is arbitrary and the data is synthetic. It is not a real
+observation or change, and it is not evidence about the Sundarbans, Bangladesh
+or the Ganges–Brahmaputra delta.
 
-The generated `site.yaml` and built `manifest.json` retain the fixture caveat:
+The generated `site.yaml` and built `manifest.json` include this fixture caveat:
 *Synthetic fixture data: not a real observation, not a real change, and not
-evidence of anything.* Do not remove or soften that caveat in the site config
-or UI.
+evidence of anything.*
 
 ## Target coordinates and CRS note
 

@@ -1,5 +1,7 @@
 # Report — 02-worldview-scan — 2026-11-14
 
+> Historical report. The procedural scan routes and standalone player described below were removed on 2026-11-15. Current playback reads installed manifests and exact observation dates; live fetch remains an explicit action.
+
 ## Branch / PR / SHAs
 
 - Branch: `arena/7f70de26-centrale` (session-pinned active branch). The brief names `feat/worldview-time-machine`, but that branch is not the active session branch; branch switching/creation is not permitted in this session. Work remains on the pinned branch.
@@ -14,7 +16,7 @@
 - Added `lib/scanFrames.ts`: produces ordered frames only from `kind: "backscatter"` layers and only for the five requested Anak Krakatau dates. Difference/change-mask layers and other dates cannot enter playback. Per-frame provenance is joined from acquisition records and source metadata.
 - Added a Worldview-inspired review: exact-date timeline, play/pause and frame count, before/event/month-after framing around 2026-09-06, five fixed date presets with absent dates disabled, and exact-date before/after comparison through the existing slider-only `ComparisonViewer` (camera sync retained).
 - Added progressive “Exact acquisitions and provenance” disclosure with date, polarization, product kind, CRID, maturity, source and granule.
-- Procedural `/tm/scan` remains available only through the explicitly labeled “Optional demo visualization (procedural, not observations)” disclosure, with the full required warning.
+- At the time of this report, `/tm/scan` remained available through a labelled demo disclosure. The procedural route and player were removed later on 2026-11-15.
 - Fixed same-origin raster URL resolution in `components/Map.tsx` when `NEXT_PUBLIC_API_URL` is unset; tile requests use the page origin.
 - Added live-fetch client and frame-adapter tests.
 
@@ -74,14 +76,6 @@ Exit status: 0
 ```
 
 `git diff --cached --check` also passed before commit.
-
-## Honesty invariants
-
-- **Kept.** Demo mode always carries “not NISAR observations, not a real change, not evidence of anything.”
-- **Kept.** Real mode labels the maturity as provided by the manifest (including `PROVISIONAL`) and does not claim validation or scientific review.
-- **Kept.** Playback adapter accepts only exact dated `backscatter` layers and filters to the five specified dates; no interpolated/substitute dates, difference layers or change masks.
-- **Kept.** Date selection refuses a date not present in the manifest for the selected polarization. Before/after uses the existing exact-observation comparison and slider-only reveal behavior.
-- **Kept.** Live failures, credentials, size limit and cancellation are distinct from successful frames; only backend-reported progress is shown.
 
 ## Screenshot-worthy description
 

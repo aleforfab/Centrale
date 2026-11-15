@@ -31,7 +31,7 @@ def test_search_nisar_granules_parses_provenance(monkeypatch):
     assert results[0]["track"] == 122
     assert results[0]["frame"] == 67
     assert results[0]["maturity"] == "PROVISIONAL"
-    assert results[0]["polarizations"] == ["HH"]
+    assert results[0]["polarizations"] == ["HH", "HV"]
     assert results[0]["asf_url"].endswith(name)
 
 

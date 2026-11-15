@@ -1,9 +1,19 @@
 # Full feature audit — 2026-11-14
 
 Scope: `arena/1b1bb994-centrale`, branched from merged `main` `d89fc8d`. This is a
-verification record, not a claim that a real volcanic NISAR case has been built.
+historical verification snapshot; it records what was checked on 2026-11-14.
 
-## Executive answer
+## Current status — 2026-11-15
+
+The procedural Time Machine routes and standalone player have been removed. The
+`/time-machine` page now loads installed site manifests, plays exact dated
+backscatter observations, and exposes live fetch through the shared panel. The
+historical execution results and route checks below describe the earlier build.
+The current working tree passed frontend typecheck, all 66 tests, and production
+build; backend Ruff passed and 168 tests passed (12 dependency/deprecation
+warnings). No live ASF build or browser-pixel verification was performed.
+
+## Audit snapshot — 2026-11-14
 
 **Does the frontend work with the backend?** Yes, for the installed-product API
 path. Next.js serves same-origin `/api/*` and `/products/*` requests and proxies
@@ -104,30 +114,25 @@ same as “unlimited”.
   `Backscatter graph`.
 - `/time-machine` exposes `Angle normalization (proposed)` and
   `Interferometry (proposed)`.
-- The Time Machine “Backend support check” now describes real live fetch as an
-  operator path that is not called by the procedural scan button.
+- Time Machine exposes the shared live-fetch panel and builds playback from
+  installed manifest observations.
 
 ## What needs to be fixed for the site to fully run
 
 ### P0 — real scan and processing
 
-1. **Wire the Time Machine scan to the backend live-fetch API.** Today `/tm/scan`
-   is a procedural prototype. A real mode must call `POST /api/nisar/fetch` with
-   the selected bbox/date range/polarizations, poll `/api/nisar/fetch/jobs/{id}`,
-   and handle queued, running, succeeded, failed, cancelled and credential-error
-   states.
-2. **Add a manifest-to-frames adapter.** On success, the UI must use the built
-   site manifest's `kind: "backscatter"` layers and exact dates, not SVG frames.
-   Difference and change-mask layers must remain out of playback/observation
-   frames.
-3. **Configure Earthdata credentials and ASF network access.**
+The live-fetch panel now submits the selected region, date range and
+polarizations to the backend. Time Machine playback reads installed manifests
+and uses exact `kind: "backscatter"` dates; the procedural routes/player have
+been removed. Remaining deployment work:
+
+1. **Configure Earthdata credentials and ASF network access.**
    `EARTHDATA_TOKEN` or `EARTHDATA_USERNAME`/`EARTHDATA_PASSWORD` must be present
    in the backend environment; credentials must not be committed.
-4. **Choose the volcanic case.** Need site name, bbox, eruption/pre/post dates,
-   preferred polarization, track/frame/direction stack, granule names or ASF
-   search window, and approval for the download volume. The current default bbox
-   is a synthetic rehearsal region, not a reviewed volcanic case.
-5. **Verify a real end-to-end build.** Search ASF, download the real granules,
+2. **Confirm the volcanic case and download window.** Select the site name,
+   bbox, date range, polarization, track/frame/direction stack and granule limit;
+   approve the expected download volume.
+3. **Verify a real end-to-end build.** Search ASF, download the real granules,
    build COGs/tiles/statistics, run `verify`, inspect the manifest and render the
    real tiles in a browser. None of that has happened yet.
 
@@ -158,8 +163,8 @@ same as “unlimited”.
     coregistration, DEM/topographic phase removal, spatial/perpendicular baseline
     checks, coherence, filtering, phase unwrapping, atmospheric/ionospheric
     screening, line-of-sight displacement scaling and scientific review.
-12. **Keep the new selectable option honest.** Until that chain exists, the UI
-    must say “proposed” and must not display a deformation/coherence result.
+12. The selectable InSAR option remains labelled “proposed”; no
+    deformation/coherence result is displayed until an end-to-end chain exists.
 
 ### P1 — deployment and reliability
 
@@ -203,8 +208,6 @@ same as “unlimited”.
 3. Which normalization is intended: gamma-to-sigma using GCOV's
    `rtcGammaToSigmaFactor`, local-incidence-angle correction from a DEM, or an
    empirical cross-date calibration? What reference geometry should be used?
-4. Should the Time Machine default to a real live-fetch scan when credentials are
-   present, with procedural demo mode as an explicit fallback, or keep demo mode
-   as the default?
+4. What date range and polarization should be the Time Machine live-fetch default?
 5. Are Earthdata credentials and a VM/deployment environment available for the
    real download/build test, and is the multi-gigabyte download approved?

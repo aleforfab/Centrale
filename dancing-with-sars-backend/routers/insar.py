@@ -1,4 +1,4 @@
-"""Static, honest status for the proposed InSAR phase chain.
+"""Static status for the proposed InSAR phase chain.
 
 There is deliberately no compute endpoint. A real interferometric result must
 wait for phase-capable products, a DEM, end-to-end verification and scientific

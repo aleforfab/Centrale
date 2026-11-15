@@ -281,8 +281,8 @@ the server side, so the browser only ever talks to one origin.
 The published criteria are usually variants of impact, creativity, validity,
 relevance and presentation. Practical translations:
 
-- **Validity** is where radar projects fail. One honest, well-scoped observation
-  with a stated limitation beats five overclaimed hazard maps.
+- **Validity** is where radar projects fail. One carefully scoped observation
+  with a stated limitation is more useful than five overclaimed hazard maps.
 - **Impact** needs a named user and a specific decision they could make, not
   "this could help many sectors".
 - **Creativity** is often in the presentation: a reveal slider that forces a

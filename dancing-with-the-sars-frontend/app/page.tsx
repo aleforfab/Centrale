@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { LiveScanPanel, BuiltProductsBanner } from "@/components/LiveScanPanel";
 import { AppShell } from "@/components/AppShell";
 import { Map, type MapView } from "@/components/Map";
+import { SiteSelector } from "@/components/SiteSelector";
 import { api } from "@/lib/api";
 import { pairDates } from "@/lib/comparison";
 import type {
@@ -31,7 +32,6 @@ const PLATE = "plate";
 const PLATE_TAG = "plate__tag";
 const PLATE_HEADER = "plate__header gap-4";
 const PLATE_RIGHT_TAG = "plate__right-tag shrink-0";
-const PLATE_CAPTION = "plate__caption";
 const COLOPHON = "colophon";
 const FOOTNOTE = "footnote";
 /* Separators and hover belong to `.index-row`; the active marker is drawn on the inner wrapper. */
@@ -123,8 +123,7 @@ export default function Home() {
   const [siteId, setSiteId] = useState("");
   const [manifest, setManifest] = useState<SiteManifest | null>(null);
   const [polarization, setPolarization] = useState("");
-  const [layerSelection, setLayerSelection] = useState<{ active: string; visible: string[] }>({ active: "", visible: [] });
-  const { active: layerId, visible: visibleLayerIds } = layerSelection;
+  const [layerId, setLayerId] = useState("");
   const [builtId, setBuiltId] = useState("");
   const [revision, setRevision] = useState(0);
   const [view, setView] = useState<MapView>("optical");
@@ -169,7 +168,7 @@ export default function Home() {
         setPolarization(initialPol);
         const initialLayer = [...siteManifest.layers].filter((item) => item.kind === "backscatter" && item.pol === initialPol).sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))[0]
           ?? siteManifest.layers[0];
-        setLayerSelection({ active: initialLayer?.id ?? "", visible: [] });
+        setLayerId(initialLayer?.id ?? "");
       })
       .catch((reason: unknown) => {
         if (active) setError(errorMessage(reason));
@@ -187,18 +186,15 @@ export default function Home() {
     [manifest, polarization],
   );
   const layer = polLayers.find((item) => item.id === layerId) ?? polLayers[0] ?? null;
-  const visibleLayers = useMemo(() => {
-    const overlays = polLayers.filter((item) => visibleLayerIds.includes(item.id) && item.id !== layer?.id);
-    return layer ? [...overlays, layer] : overlays;
-  }, [layer, polLayers, visibleLayerIds]);
+  const visibleLayers = useMemo(() => layer ? [layer] : [], [layer]);
   const stats = selectedStats(layer, manifest, polarization);
 
   useEffect(() => {
     if (!layer || layer.id === layerId) return;
-    setLayerSelection((current) => ({ ...current, active: layer.id }));
+    setLayerId(layer.id);
   }, [layer, layerId]);
 
-  const selectLayer = (id: string) => setLayerSelection((current) => ({ ...current, active: id, visible: current.visible.filter((item) => item !== id) }));
+  const selectLayer = (id: string) => setLayerId(id);
   const selectAcquisition = (date: string) => {
     const backscatterLayer = polLayers.find((item) => item.kind === "backscatter" && item.date === date);
     if (backscatterLayer) selectLayer(backscatterLayer.id);
@@ -224,16 +220,13 @@ export default function Home() {
       subtitle="Installed NISAR product layers, exact dates and measured change products."
     >
       <div className="mb-4 flex flex-wrap items-end gap-x-4 gap-y-3">
-        <Field id="dashboard-site" label="Site">
-          <select
-            id="dashboard-site"
-            value={siteId}
-            onChange={(event) => { setBuiltId(""); setSiteId(event.target.value); }}
-            className={FIELD_CONTROL}
-          >
-            {sites.map((site) => <option key={site.id} value={site.id}>{site.title}</option>)}
-          </select>
-        </Field>
+        <SiteSelector
+          id="dashboard-site"
+          sites={sites}
+          value={siteId}
+          disabled={isLoadingSites || sites.length === 0}
+          onChange={(nextSiteId) => { setBuiltId(""); setSiteId(nextSiteId); }}
+        />
         <Field id="dashboard-polarization" label="Polarization">
           <select
             id="dashboard-polarization"
@@ -249,9 +242,8 @@ export default function Home() {
       </div>
 
       {manifest && <div className="mb-4 text-[13px] leading-5" role="status">
-        <strong>Measured backscatter change, exact dates.</strong> {manifest.acquisitions.map((a) => a.date).join(" · ")}
-        <p>{manifest.site.caveat}</p>
-        {manifest.site.id === "anak-krakatau" && <p>NASA reports lava reaching the western and southwestern coast during early September; this map shows radar return, not a mapped lava boundary. <a className={TEXT_LINK} href="https://www.earthdata.nasa.gov/news/worldview-image-archive/anak-krakatau-grows" target="_blank" rel="noreferrer">NASA Worldview: Anak Krakatau Grows ↗</a></p>}
+        <strong>Available radar observations:</strong> {manifest.acquisitions.map((a) => a.date).join(" · ")}
+        {manifest.site.id === "anak-krakatau" && <p>NASA Worldview reports early-September lava reaching the western and southwestern coast. <a className={TEXT_LINK} href="https://www.earthdata.nasa.gov/news/worldview-image-archive/anak-krakatau-grows" target="_blank" rel="noreferrer">Read the context ↗</a></p>}
       </div>}
       <details className="mb-5 border-y border-[color:var(--hairline)] py-2.5">
         <summary className={`${LABEL} cursor-pointer`}>Fetch new observations (live)</summary>
@@ -334,7 +326,6 @@ export default function Home() {
                 </p>
               </div>
             </div>
-            <p className={PLATE_CAPTION}>{manifest.site.caveat}</p>
           </section>
 
           <aside
@@ -356,37 +347,60 @@ export default function Home() {
               </div>
             </RailSection>
 
-            <RailSection id="rail-layers" tag="Layers" meta={`${polLayers.length} · ${polarization}`}>
+            <RailSection id="rail-layers" tag="Layers" meta={polarization}>
               <fieldset className="m-0 min-w-0 border-0 p-0">
-                <legend className="sr-only">Layers</legend>
-                <p className="mt-2 px-4 text-[12px]">Radio: layer being drawn. Checkbox: extra overlay. The 6 dB mask is the recommended starting threshold; 2 dB can be dominated by open-water speckle.</p>
+                <legend className="sr-only">Map layers</legend>
+                <p className="mt-2 px-4 text-[12px]">Choose a radar date or a change product.</p>
                 {(() => {
                   const row = (item: ProductLayer) => {
                     const isActive = layer?.id === item.id;
+                    const label = item.kind === "backscatter"
+                      ? `${item.date} · ${item.pol}`
+                      : item.kind === "difference"
+                        ? "Difference"
+                        : `${item.threshold_db} dB mask`;
+                    const description = item.kind === "backscatter"
+                      ? "observation"
+                      : item.kind === "difference"
+                        ? "difference"
+                        : `${item.threshold_db} dB mask`;
                     return <li key={item.id} className={INDEX_ROW}>
-                      <div className={`${ROW} items-start gap-3`}>
-                        <label className="flex min-w-0 flex-1 items-start gap-2">
-                          <input type="radio" name="active-layer" aria-label={`Draw ${item.kind === "backscatter" ? "observation" : item.kind === "difference" ? "difference" : `${item.threshold_db} dB mask`} ${layerWhen(item, manifest) ?? ""}`} checked={isActive} onChange={() => selectLayer(item.id)} className="mt-1 accent-[color:var(--accent)]" />
-                          <span><span className="sr-only">Draw </span>{item.kind === "backscatter" ? `${item.date} · ${item.pol}` : item.kind === "difference" ? "Difference" : `${item.threshold_db} dB mask`}</span>
-                        </label>
-                        <label className={`${MONO} shrink-0 text-[10px] uppercase`}>
-                          <input type="checkbox" checked={visibleLayerIds.includes(item.id)} disabled={isActive} onChange={(event) => setLayerSelection((current) => ({ ...current, visible: event.target.checked ? [...current.visible.filter((id) => id !== item.id), item.id] : current.visible.filter((id) => id !== item.id) }))} /> Extra overlay<span className="sr-only"> {item.title ?? item.id}</span>
-                        </label>
-                      </div>
+                      <label className="flex min-w-0 items-start gap-2 py-1">
+                        <input
+                          type="radio"
+                          name="active-layer"
+                          aria-label={`Draw ${description} ${layerWhen(item, manifest) ?? ""}`}
+                          checked={isActive}
+                          onChange={() => selectLayer(item.id)}
+                          className="mt-1 accent-[color:var(--accent)]"
+                        />
+                        <span>{label}</span>
+                      </label>
                     </li>;
                   };
                   const observations = polLayers.filter((item) => item.kind === "backscatter");
-                  return <div className="px-4 mt-3">
-                    <h3 className={LABEL}>Observations ({observations.length})</h3>
+                  return <div className="mt-3 px-4">
+                    <h3 className={LABEL}>Radar observations</h3>
                     <ul>{observations.map(row)}</ul>
                     <h3 className={`${LABEL} mt-4`}>Measured change ({manifest.pairs.length} pairs)</h3>
                     {manifest.pairs.map((pair) => {
-                      const products = polLayers.filter((item) => item.pair_id === pair.id).sort((a, b) => a.kind === "difference" ? -1 : b.kind === "difference" ? 1 : (b.threshold_db ?? 0) - (a.threshold_db ?? 0));
-                      return <details key={pair.id}><summary className="cursor-pointer py-2 text-[13px]">{pairDates(pair).pre} → {pairDates(pair).post}</summary><ul className="pl-3">{products.map(row)}</ul></details>;
+                      const products = polLayers
+                        .filter((item) => item.pair_id === pair.id)
+                        .sort((a, b) => a.kind === "difference" ? -1 : b.kind === "difference" ? 1 : (b.threshold_db ?? 0) - (a.threshold_db ?? 0));
+                      const mainProducts = products.filter((item) => item.kind === "difference" || (item.kind === "change_mask" && item.threshold_db === 6));
+                      const otherMasks = products.filter((item) => item.kind === "change_mask" && item.threshold_db !== 6);
+                      return <details key={pair.id}>
+                        <summary className="cursor-pointer py-2 text-[13px]">{pairDates(pair).pre} → {pairDates(pair).post}</summary>
+                        <ul className="pl-3">{mainProducts.map(row)}</ul>
+                        {otherMasks.length > 0 && <details className="pl-3">
+                          <summary className="cursor-pointer py-1 text-[11px]">Other thresholds</summary>
+                          <ul>{otherMasks.map(row)}</ul>
+                        </details>}
+                      </details>;
                     })}
                   </div>;
                 })()}
-                {visibleLayers.some((item) => item.kind === "change_mask") && <p className={`${FOOTNOTE} mt-3 px-4`}>Blue = lower return · Red = higher return. Masks are categorical.</p>}
+                {layer?.kind === "change_mask" && <p className={`${FOOTNOTE} mt-3 px-4`}>Blue = lower return · Red = higher return.</p>}
               </fieldset>
             </RailSection>
 
@@ -483,14 +497,12 @@ export default function Home() {
                         </div>
                       )}
                       <p className={`${FOOTNOTE} mt-3`}>
-                        {stats.resampled ? "Post-event data were resampled to the pre-event grid." : "Acquisition grids were aligned."}
-                        {" "}Backscatter change does not determine its cause. These are measured outputs, not a
-                        validated scientific result.
+                        {stats.resampled ? "Post-event data were aligned to the pre-event grid." : "Acquisition grids were aligned."}
                       </p>
                     </>
                   ) : (
                     <p className={`${FOOTNOTE} mt-3`}>
-                      {Number(activeThreshold) === 2 ? "The 2 dB mask can be dominated by open-water speckle; select 6 dB to review statistics." : "No pair product is active. Select a difference or change-mask layer under Layers to read its measured statistics."}
+                      {Number(activeThreshold) === 2 ? "2 dB mask selected." : "Select a change layer to view its statistics."}
                     </p>
                   )}
                 </div>

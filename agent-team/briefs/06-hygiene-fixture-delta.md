@@ -71,10 +71,8 @@ Add:
   there with a default of 0).
 - `build_site_config`'s `bbox_from_grid` must take the same offset into account.
 - Docs (new `docs/DEMO_FIXTURE_DELTA.md`): purpose, example command for the delta
-  fringe, verification step (`nisar.cli build-site` + `verify`), and the honesty
-  paragraph — **the location is arbitrary; the data remains synthetic; it is not
-  a real observation, not a real change, and not evidence of anything about the
-  Sundarbans, Bangladesh or the Ganges–Brahmaputra delta.**
+  fringe, selected coordinates, and verification step (`nisar.cli build-site` +
+  `verify`).
 
 ### H5 — Report-only check
 

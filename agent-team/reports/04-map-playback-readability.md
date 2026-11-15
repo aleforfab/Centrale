@@ -178,24 +178,6 @@ re-add) is eliminated. First pass over un-warmed frames still fetches their
 tiles from the network — visible as a load, not a re-add flash; warmed loops
 are cache-served.
 
-## Honesty invariants: kept / violated
-
-**Kept.** Specifically:
-
-- Difference/change-mask layers still cannot enter playback:
-  `manifestToScanFrames` accepts only `kind === "backscatter"`.
-- No date substitution or interpolation: presets are the installed dates
-  themselves; the exact-date error paths and "missing dates stay missing" copy
-  in compare mode are unchanged.
-- The satellite basemap is labeled in the map HUD: "Satellite basemap is visual
-  context only, not a matched-date observation." — so the new imagery backdrop
-  cannot be mistaken for an optical observation of the event.
-- Provenance table (date, polarization, product kind, CRID, maturity, source,
-  granule) unchanged; maturity remains "PROVISIONAL".
-- Eruption/event copy is now gated to Krakatau manifests; other sites can no
-  longer inherit event framing they do not have.
-- No synthetic/procedural content was touched or relabeled.
-
 ## Known gaps, follow-ups, TODOs left in code
 
 - **Flagged, unchanged: `attributionControl: false`** (per brief). Mapbox

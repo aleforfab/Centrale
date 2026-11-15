@@ -171,7 +171,7 @@ npm run typecheck   # clean, 0 errors
 npm test            # Test Files 9 passed (9) · Tests 65 passed (65)
 npm run build       # OK — routes: / (619 kB), /compare (618 kB), /time-machine (623 kB),
                     # /method (96 kB, 194 B page JS), /_not-found (custom 404),
-                    # /tm/scan + /tm/frames/[date] (dynamic, unchanged)
+                    # /tm/scan + /tm/frames/[date] were present in this historical build; removed 2026-11-15
 ```
 
 Test-count movement is explained by intentional deletions: `applications.test.ts`
@@ -194,7 +194,7 @@ pytest -q           # 157 passed, 11 warnings (dependency warnings, pre-existing
 | `/` | 200 | masthead wordmark, `NISAR · L-band · GCOV`, `/method` link, PROVISIONAL copy |
 | `/compare` | 200 | diptych headers, dates, colophon slot |
 | `/time-machine` | 200 | field-log chrome, live-scan panel |
-| `/method` | 200 | honesty register; `P05023`, PROVISIONAL, Gate 2 marked not executed, InSAR marked proposed |
+| `/method` | 200 | method summary; `P05023`, PROVISIONAL, Gate 2 marked not executed, InSAR marked proposed |
 | `/definitely-not-a-page` | 404 | `PAGE NOT IN THE CATALOGUE` plate |
 
 ### Explicitly NOT verified

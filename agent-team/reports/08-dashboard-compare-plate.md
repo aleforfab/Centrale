@@ -1,5 +1,7 @@
 # Report — 08-dashboard-compare-plate — 2026-11-15
 
+> Historical report. The route/build output below predates the 2026-11-15 removal of the procedural Time Machine routes and standalone player.
+
 ## Branch / PR / SHAs
 
 - Branch: `arena/dfb5a5a0-centrale`. The brief names `feat/dashboard-compare-plate`; this session is pinned to the Arena branch and cannot rename it.
@@ -164,35 +166,6 @@ Two defects were found and fixed this way:
 
 - `.rule-table th` uppercases row labels, which rendered "Noise estimate σ" as "NOISE ESTIMATE Σ". The symbol is now exempt from the transform.
 - `.redesign-content :is(section, …)` forces a paper background with `!important`, which would have stripped the colophon colour from the viewer's refusal notice. It is now a `div`.
-
-## Honesty invariants
-
-Kept. Specifically:
-
-- **Dates, pol, kind**: in the plate header, the HUD chip, every layer row and the Diptych header. Pair products show the exact `pre → post` window, never a single date.
-- **Source, CRID, maturity**: source chips in SITE; `PROVISIONAL` also in the plate header; CRID repeated per acquisition; "Processing identity" row in the viewer.
-- **Granules**: in ACQUISITIONS (truncated, full name one click away) and in the viewer's "Acquisition IDs" row (full).
-- **No substitution**: `/compare` still mounts the viewer only for two exact installed dates. Date choices come from `backscatter` layers only; difference and change-mask layers are not selectable as frames. No playback code is touched.
-- **Verbatim copy, unchanged**: site caveat (incl. the synthetic caveat); `Satellite basemap is visual context only, not a matched-date observation.`; `Backscatter change does not determine its cause. These are measured outputs, not a validated scientific result.`; `No substitute date, polarization or difference layer is used.`; `No substitute date, polarization or difference product is used to fill the gap.`; `Two dates show a measured difference in radar brightness. They do not by themselves identify the cause, the extent of an event, or damage.`; `python -m nisar.cli build-site --config sites/<site>.yaml`.
-- **Not hidden**: no honesty copy sits behind a toggle. The only disclosure widgets are the live-fetch panel (as before) and the granule expander (the truncated granule is always visible).
-- **Stats wording**: section is "Measured change"; rows are "Lower return" / "Higher return". No "validated", no cause.
-
-Copy changes that are not honesty copy, for review:
-
-| Where | Before | After |
-|---|---|---|
-| `/` eyebrow | Map-first explorer | Observation plate |
-| `/` subtitle | …measured change products in a cinematic radar workspace. | …measured change products. |
-| `/` intro line | Explore installed dated radar products and their provenance. | Installed dated radar products and their provenance. |
-| `/` rail tags | Site record · Change statistics | Site · Measured change |
-| `/` stats row | Noise estimate | Noise estimate σ |
-| `/compare` eyebrow | Exact-pair viewer | Diptych · exact-pair viewer |
-
-New copy:
-
-- `/` MEASURED CHANGE, when no pair layer is active: "No pair product is active. Select a difference or change-mask layer under Layers to read its measured statistics."
-- `/compare` header cell, under a date that is not installed: "No <pol> backscatter observation is installed on this date. No substitute date is used."
-- `/compare` header cell, under an installed date: "<pol> · backscatter · exact installed date".
 
 ## Known gaps, follow-ups, TODOs left in code
 
