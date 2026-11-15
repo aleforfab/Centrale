@@ -42,6 +42,20 @@ const SITE_FOOTPRINT_LAYER = "site-bbox-line";
 const SITE_FOOTPRINT_COLOR = "#ff8a3d";
 const SITE_FOOTPRINT_WIDTH = 2;
 
+/*
+ * Map chrome — REDESIGN_GUIDE §3 "on-imagery chips": the one dark exception.
+ * Imagery is dark, so overlays are near-black chips with paper text instead of
+ * paper chips. Values are the guide's literals (there is no token for them).
+ * The page owns the `.plate` frame; this component draws no border of its own.
+ */
+const CHIP =
+  "rounded-[2px] border border-[rgba(245,243,236,0.22)] bg-[rgba(13,12,10,0.88)] font-[family-name:var(--font-mono)] text-[#F5F3EC]";
+const CHIP_FOCUS =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF8A3D]";
+/* Mapbox's own controls, squared off and de-shadowed to sit in the same system. */
+const MAPBOX_CONTROLS =
+  "[&_.mapboxgl-ctrl-group]:!rounded-[2px] [&_.mapboxgl-ctrl-group]:!shadow-none [&_.mapboxgl-ctrl-group]:border [&_.mapboxgl-ctrl-group]:border-[rgba(22,19,15,0.32)] [&_.mapboxgl-ctrl-scale]:!rounded-none [&_.mapboxgl-ctrl-scale]:font-[family-name:var(--font-mono)]";
+
 const FALLBACK_STYLE = (dark: boolean): mapboxgl.Style =>
   ({
     version: 8,
@@ -50,7 +64,7 @@ const FALLBACK_STYLE = (dark: boolean): mapboxgl.Style =>
       {
         id: "dark-background",
         type: "background",
-        paint: { "background-color": dark ? "#071018" : "#0b1720" },
+        paint: { "background-color": dark ? "#0D0C0A" : "#14120F" },
       },
     ],
   }) as unknown as mapboxgl.Style;
@@ -254,44 +268,49 @@ export const Map: React.FC<MapProps> = ({ bbox, layers, activeLayerId, view, set
       : "Grayscale: brighter means stronger radar return";
 
   return (
-    <div className="relative h-full min-h-[420px] w-full overflow-hidden rounded-lg border border-slate-700/80">
+    <div className={`relative h-full min-h-[420px] w-full overflow-hidden bg-[#0D0C0A] ${MAPBOX_CONTROLS}`}>
       <div ref={mapContainer} className="h-full w-full" />
       {!HAS_MAPBOX_TOKEN && (
         <>
           <div
-            className="pointer-events-none absolute inset-0 opacity-60"
+            className="pointer-events-none absolute inset-0"
             aria-hidden="true"
             style={{
               backgroundImage:
-                "linear-gradient(rgba(125,216,236,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(125,216,236,0.12) 1px, transparent 1px)",
+                "linear-gradient(rgba(245,243,236,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(245,243,236,0.07) 1px, transparent 1px)",
               backgroundSize: "48px 48px",
             }}
           />
-          <div className="absolute right-3 top-3 max-w-[240px] rounded-md border border-amber-700/50 bg-slate-950/90 px-2 py-1 text-[10px] leading-4 text-amber-100">
+          <div className={`${CHIP} absolute right-14 top-3 max-w-[240px] px-2 py-1 text-[10px] leading-4`}>
             Local canvas: product tiles remain visible; Mapbox basemap needs a real token.
           </div>
         </>
       )}
-      <div className="absolute left-3 top-3 flex rounded-md border border-slate-600 bg-slate-950/95 p-1 text-xs shadow-lg">
+      <div className={`${CHIP} absolute left-3 top-3 flex gap-0.5 p-0.5`} role="group" aria-label="Map view">
         {(["optical", "sar"] as const).map((mode) => (
           <button
             key={mode}
             type="button"
             aria-pressed={view === mode}
             onClick={() => setView(mode)}
-            className={`rounded px-3 py-1.5 capitalize ${
-              view === mode ? "bg-slate-700 text-white" : "text-slate-300 hover:text-white"
+            className={`rounded-[1px] px-2.5 py-1.5 text-[10px] uppercase leading-none tracking-[0.14em] ${CHIP_FOCUS} ${
+              view === mode
+                ? "bg-[#F5F3EC] text-[#16130F]"
+                : "text-[rgba(245,243,236,0.72)] hover:text-[#F5F3EC]"
             }`}
           >
             {mode === "optical" ? "Optical context" : "NISAR"}
           </button>
         ))}
       </div>
-      <aside className="absolute bottom-3 left-3 max-w-[320px] rounded-md border border-slate-700 bg-slate-950/95 p-3 text-[11px] text-slate-300 shadow-lg">
-        <h3 className="mb-1 text-xs font-semibold text-white">{selectedTitle}</h3>
-        <p>Satellite basemap is visual context only, not a matched-date observation.{view !== "optical" ? ` ${selectedLayer?.legend ?? layerColor}` : ""}</p>
+      <aside
+        className={`${CHIP} absolute bottom-[4.5rem] left-3 max-w-[min(320px,calc(100%-1.5rem))] sm:bottom-11 px-3 py-2.5 text-[10.5px] leading-[1.5]`}
+        aria-label="Map legend"
+      >
+        <p className="mb-1 text-[11px] font-medium">{selectedTitle}</p>
+        <p className="opacity-80">Satellite basemap is visual context only, not a matched-date observation.{view !== "optical" ? ` ${selectedLayer?.legend ?? layerColor}` : ""}</p>
       </aside>
-      <div className="absolute bottom-10 right-3 rounded bg-slate-950/80 px-2 py-1 text-[10px] text-slate-300">
+      <div className={`${CHIP} absolute bottom-10 right-3 px-2 py-1 text-[10px] leading-4`}>
         {HAS_MAPBOX_TOKEN ? "Map imagery © Mapbox" : "Preview canvas · no external basemap"}
       </div>
     </div>
