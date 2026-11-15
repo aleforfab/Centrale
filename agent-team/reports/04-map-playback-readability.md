@@ -1,5 +1,13 @@
 # Report — 04-map-playback-readability — 2026-11-15
 
+> **Postscript (2026-11-15):** PR #15 was marked ready (CI green: backend pass,
+> frontend pass) and **merged into `main` at the maintainer's explicit request**
+> — merge commit `d8e2a2101d5eabb0511965a8a8e1e3143e48d933`, 2026-11-15T08:23:05Z.
+> Note the round-2 order (06 → 04 → 05) landed as 04 → 06: slice 06's PR #14
+> merged immediately after; combined-`main` verification belongs to the
+> supervisor's final integration pass. Deployed-URL checks listed below remain
+> open.
+
 ## Branch / PR link / base SHA / HEAD SHA
 
 - **Branch:** `arena/5419dd9b-centrale` (session-pinned active branch; the brief's `feat/map-playback-readability` name could not be created or switched to per session branch policy — same situation as workers 01–03).
