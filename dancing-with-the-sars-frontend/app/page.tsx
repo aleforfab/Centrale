@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { LiveScanPanel, BuiltProductsBanner } from "@/components/LiveScanPanel";
 import { AppShell } from "@/components/AppShell";
 import { Map, type MapView } from "@/components/Map";
 import { api } from "@/lib/api";
@@ -36,8 +36,10 @@ export default function Home() {
   const [siteId, setSiteId] = useState("");
   const [manifest, setManifest] = useState<SiteManifest | null>(null);
   const [polarization, setPolarization] = useState("");
-  const [layerId, setLayerId] = useState("");
-  const [visibleLayerIds, setVisibleLayerIds] = useState<string[]>([]);
+  const [layerSelection, setLayerSelection] = useState<{ active: string; visible: string[] }>({ active: "", visible: [] });
+  const { active: layerId, visible: visibleLayerIds } = layerSelection;
+  const [builtId, setBuiltId] = useState("");
+  const [revision, setRevision] = useState(0);
   const [view, setView] = useState<MapView>("optical");
   const [isLoadingSites, setIsLoadingSites] = useState(true);
   const [isLoadingManifest, setIsLoadingManifest] = useState(false);
@@ -79,8 +81,7 @@ export default function Home() {
         setPolarization(initialPol);
         const initialLayer = [...siteManifest.layers].reverse().find((item) => item.kind === "backscatter")
           ?? siteManifest.layers[0];
-        setLayerId(initialLayer?.id ?? "");
-        setVisibleLayerIds(initialLayer ? [initialLayer.id] : []);
+        setLayerSelection({ active: initialLayer?.id ?? "", visible: initialLayer ? [initialLayer.id] : [] });
       })
       .catch((reason: unknown) => {
         if (active) setError(errorMessage(reason));
@@ -91,7 +92,7 @@ export default function Home() {
     return () => {
       active = false;
     };
-  }, [siteId]);
+  }, [siteId, revision]);
 
   const polLayers = useMemo(
     () => manifest?.layers.filter((layer) => !layer.pol || layer.pol === polarization) ?? [],
@@ -106,19 +107,18 @@ export default function Home() {
 
   useEffect(() => {
     if (!layer || layer.id === layerId) return;
-    setLayerId(layer.id);
+    setLayerSelection((current) => ({ ...current, active: layer.id, visible: current.visible.includes(layer.id) ? current.visible : [...current.visible, layer.id] }));
   }, [layer, layerId]);
 
-  useEffect(() => {
-    setVisibleLayerIds((current) => {
-      const visibleForPol = current.filter((id) => polLayers.some((item) => item.id === id));
-      return visibleForPol.length || !layer ? visibleForPol : [layer.id];
-    });
-  }, [polarization, manifest?.site.id]);
-
+  const selectLayer = (id: string) => setLayerSelection((current) => ({ active: id, visible: current.visible.includes(id) ? current.visible : [...current.visible, id] }));
   const selectAcquisition = (date: string) => {
     const backscatterLayer = polLayers.find((item) => item.kind === "backscatter" && item.date === date);
-    if (backscatterLayer) setLayerId(backscatterLayer.id);
+    if (backscatterLayer) selectLayer(backscatterLayer.id);
+  };
+  const built = async (id: string) => {
+    const list = await api.sites();
+    if (!list.some((site) => site.id === id)) throw new Error("Built site is not yet in the product catalog.");
+    setSites(list); setBuiltId(id); setSiteId(id); setRevision((value) => value + 1);
   };
 
   return (
@@ -128,24 +128,27 @@ export default function Home() {
       title="Dancing with the SARs"
       subtitle="Installed NISAR product layers, exact dates and measured change products in a cinematic radar workspace."
     >
-      <section className="tm-hero">
-        <div>
-          <p className="tm-hero__eyebrow">Mission workspace · installed products</p>
-          <h2>Explore a dated radar stack, then step into the Time Machine.</h2>
-          <p>
-            The map stays dominant. Controls are compact, dates are explicit, and the synthetic caveat travels
-            with every product view.
-          </p>
-        </div>
-        <div className="tm-hero__actions">
-          <Link href="/time-machine" className="tm-button tm-button--primary">
-            Open Time Machine →
-          </Link>
-          <Link href="/compare" className="tm-button">
-            Exact before / after
-          </Link>
-        </div>
-      </section>
+      <section className="tm-panel mb-4"><p className="tm-muted">Explore installed dated radar products and their provenance.</p></section>
+          <div className="tm-dashboard-controls">
+            <label>
+              Polarization
+              <select
+                value={polarization}
+                onChange={(event) => setPolarization(event.target.value)}
+                disabled={!manifest}
+                className="mt-1 block w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white disabled:opacity-50"
+              >
+                {manifest?.polarizations.map((item) => <option key={item.pol} value={item.pol}>{item.pol}</option>)}
+              </select>
+            </label>
+            <label>Site
+              <select value={siteId} onChange={(event) => { setBuiltId(""); setSiteId(event.target.value); }} className="mt-1 block w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white">
+                {sites.map((site) => <option key={site.id} value={site.id}>{site.title}</option>)}
+              </select>
+            </label>
+          </div>
+      <details className="tm-panel mb-4"><summary className="cursor-pointer">Fetch new observations (live)</summary><div className="mt-4"><LiveScanPanel idPrefix="dashboard-scan" compact onBuilt={built} /></div></details>
+      {manifest && builtId === siteId && <BuiltProductsBanner manifest={manifest} />}
 
       {error && (
         <div className="tm-problem" role="alert" style={{ marginBottom: 18 }}>
@@ -166,8 +169,7 @@ export default function Home() {
         <section className="tm-panel tm-notice" style={{ margin: "48px auto", maxWidth: 720, textAlign: "center", padding: 32 }}>
           <h2>No precomputed products yet</h2>
           <p className="tm-muted" style={{ marginTop: 12 }}>
-            This interface only displays built NISAR products; it does not substitute Sentinel-1 analysis or
-            create results on demand.
+            The viewer displays built NISAR products and does not substitute Sentinel-1 analysis. A live fetch can be explicitly requested above.
           </p>
           <p className="mt-4 rounded bg-slate-950 p-3 font-mono text-xs text-slate-300">
             python -m nisar.cli build-site --config sites/&lt;site&gt;.yaml
@@ -175,56 +177,16 @@ export default function Home() {
         </section>
       ) : (
         <>
-          <div className="tm-dashboard-controls">
-            <label>
-              Polarization
-              <select
-                value={polarization}
-                onChange={(event) => setPolarization(event.target.value)}
-                disabled={!manifest}
-                className="mt-1 block w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white disabled:opacity-50"
-              >
-                {manifest?.polarizations.map((item) => <option key={item.pol} value={item.pol}>{item.pol}</option>)}
-              </select>
-            </label>
-            <label>
-              Product layer
-              <select
-                value={layer?.id ?? ""}
-                onChange={(event) => {
-                  setLayerId(event.target.value);
-                  setVisibleLayerIds((current) => current.includes(event.target.value)
-                    ? current
-                    : [...current, event.target.value]);
-                }}
-                disabled={!polLayers.length}
-                className="mt-1 block w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white disabled:opacity-50"
-              >
-                {polLayers.map((item) => <option key={item.id} value={item.id}>{item.title ?? item.id}</option>)}
-              </select>
-            </label>
-          </div>
-
-          {polLayers.length > 1 && (
-            <fieldset className="tm-dashboard-overlays">
-              <legend>Visible map overlays</legend>
-              <div className="flex flex-wrap gap-x-5 gap-y-2">
-                {polLayers.map((item) => (
-                  <label key={item.id} className="flex items-center gap-2 text-xs text-slate-300">
-                    <input
-                      type="checkbox"
-                      checked={visibleLayerIds.includes(item.id)}
-                      onChange={(event) => setVisibleLayerIds((current) => event.target.checked
-                        ? [...current, item.id]
-                        : current.filter((id) => id !== item.id))}
-                      className="accent-sky-500"
-                    />
-                    {item.title ?? item.id}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          )}
+          <fieldset className="tm-dashboard-overlays">
+            <legend>Layers</legend>
+            <p className="tm-muted mb-2">Choose an active layer and toggle visibility independently. A hidden active layer remains selected.</p>
+            <div className="space-y-2">{polLayers.map((item) => <div key={item.id} className="flex flex-wrap items-center gap-3 text-xs text-slate-300">
+              <label className="flex items-center gap-2"><input type="radio" name="active-layer" checked={layer?.id === item.id} onChange={() => selectLayer(item.id)} /> <span>{item.title ?? item.id}{layer?.id === item.id && !visibleLayerIds.includes(item.id) ? " (hidden)" : ""}</span></label>
+              <label><input type="checkbox" checked={visibleLayerIds.includes(item.id)} onChange={(event) => setLayerSelection((current) => ({ ...current, visible: event.target.checked ? [...current.visible.filter((id) => id !== item.id), item.id] : current.visible.filter((id) => id !== item.id) }))} /> Visible</label>
+              <span className="tm-chip">{item.date ?? "undated"}</span><span className="tm-chip">{item.pol ?? "all pols"}</span><span className="tm-chip">{item.kind}</span>
+            </div>)}</div>
+            {layer?.legend && <p className="mt-3 text-xs text-slate-400">{layer.legend}</p>}
+          </fieldset>
 
           {isLoadingManifest ? (
             <div className="tm-panel" style={{ display: "grid", minHeight: 420, placeItems: "center" }}>
@@ -244,18 +206,16 @@ export default function Home() {
                 <div className="tm-dashboard-map__hud">
                   <div className="tm-dashboard-map__date">
                     <span>{layer?.kind === "backscatter" ? "Observation" : "Product"}</span>
-                    <strong>{layer?.date ?? manifest.pairs[0]?.label ?? manifest.site.title}</strong>
+                    <strong>{layer?.date ?? (layer?.kind === "difference" ? manifest.pairs.find((pair) => pair.id === layer.pair_id)?.label : null) ?? "Date not reported"}</strong>
                     <small>{polarization} · {layer?.title ?? "No layer selected"}</small>
                   </div>
                   <span className="tm-stage__badge" style={{ position: "static" }}>
-                    Synthetic fixture
+                    {manifest.source.maturity}
                   </span>
                 </div>
                 <div className="tm-dashboard-map__footer">
                   <span>{manifest.site.caveat}</span>
-                  <Link href="/time-machine" className="tm-button tm-button--primary">
-                    Play the Time Machine →
-                  </Link>
+
                 </div>
               </section>
 
@@ -323,7 +283,7 @@ export default function Home() {
                         >
                           <span className="block text-xs font-semibold text-slate-100">{acquisition.date} · Cycle {acquisition.cycle}</span>
                           <span className="mt-1 block break-all font-mono text-[10px] text-slate-400">{acquisition.granule}</span>
-                          <span className="mt-1 block text-[10px] text-slate-500">{acquisition.crid} · {acquisition.coverage} coverage</span>
+                          <span className="mt-1 block text-[10px] text-slate-500">{acquisition.coverage} coverage</span>
                         </button>
                         <a
                           href={acquisition.links.asf ?? acquisition.download_url ?? `https://search.earthdata.nasa.gov/search?q=${encodeURIComponent(acquisition.granule)}`}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { LiveScanPanel, BuiltProductsBanner } from "@/components/LiveScanPanel";
 import { AppShell } from "@/components/AppShell";
 import { ComparisonViewer } from "@/components/ComparisonViewer";
 import { api } from "@/lib/api";
@@ -52,6 +53,8 @@ export default function ComparePage() {
   const [afterDate, setAfterDate] = useState("");
   const [loadingSites, setLoadingSites] = useState(true);
   const [loadingManifest, setLoadingManifest] = useState(false);
+  const [builtId, setBuiltId] = useState("");
+  const [revision, setRevision] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const loadSites = useCallback(() => {
@@ -96,7 +99,7 @@ export default function ComparePage() {
     return () => {
       active = false;
     };
-  }, [siteId]);
+  }, [siteId, revision]);
 
   const pols = useMemo(() => (manifest ? observationPolarizations(manifest) : []), [manifest]);
   const availableDates = useMemo(
@@ -144,6 +147,8 @@ export default function ComparePage() {
 
   return (
     <AppShell current="/compare" eyebrow="Exact-pair viewer" title="Before / after comparison">
+      <details className="tm-panel mb-4"><summary className="cursor-pointer">Fetch new observations (live)</summary><div className="mt-4"><LiveScanPanel idPrefix="compare-scan" compact onBuilt={async (id) => { const list = await api.sites(); if (!list.some((site) => site.id === id)) throw new Error("Built site is not yet in the product catalog."); setSites(list); setBuiltId(id); setSiteId(id); setRevision((value) => value + 1); }} /></div></details>
+      {manifest && builtId === siteId && <BuiltProductsBanner manifest={manifest} />}
       {error && (
         <div
           className="mb-5 flex items-start justify-between gap-4 rounded-md border border-red-700/60 bg-red-950/80 p-4 text-sm text-red-200"
@@ -153,7 +158,7 @@ export default function ComparePage() {
             <p className="font-medium">The catalogue or site could not be loaded.</p>
             <p className="mt-1 text-red-300/90">{error}</p>
             <p className="mt-1 text-[11px] text-red-300/70">
-              This page shows installed products only; it does not start processing.
+              The viewer shows installed products; a live fetch requires an explicit request.
             </p>
           </div>
           <button type="button" onClick={loadSites} className="shrink-0 underline underline-offset-2">
@@ -168,8 +173,7 @@ export default function ComparePage() {
         <section className="mx-auto mt-16 max-w-2xl rounded-xl border border-slate-700 bg-[#111a24] p-8 text-center">
           <h2 className="text-lg font-semibold">No installed products to compare</h2>
           <p className="mt-3 text-sm leading-6 text-slate-400">
-            A comparison needs a built site with at least one curated pair. Build one with the backend CLI, then
-            reload this page. Nothing is generated here on demand.
+            A comparison needs a built site with at least two exact backscatter observations. Use the backend CLI or explicitly request a live fetch above.
           </p>
           <p className="mt-4 rounded bg-slate-950 p-3 font-mono text-xs text-slate-300">
             python -m nisar.cli build-site --config sites/&lt;site&gt;.yaml
@@ -179,6 +183,7 @@ export default function ComparePage() {
         <>
           <div className="tm-calendar">
             <div className="tm-calendar__row">
+              <label className="tm-calendar__label">Site<select value={siteId} onChange={(event) => { setBuiltId(""); setSiteId(event.target.value); }}>{sites.map((site) => <option key={site.id} value={site.id}>{site.title}</option>)}</select></label>
               <DateChoice
                 label="Before date"
                 value={beforeDate}
@@ -206,11 +211,7 @@ export default function ComparePage() {
                 </select>
               </label>
             </div>
-            <div className="tm-chip-row" aria-label="Exact observation dates">
-              {availableDates.map((date) => (
-                <span key={date} className="tm-chip">{date}</span>
-              ))}
-            </div>
+            <p className="text-xs text-slate-400" aria-label="Exact observation dates">Available {pol} dates: {availableDates.join(" · ") || "none"}</p>
           </div>
 
           {calendarError && (
@@ -221,7 +222,7 @@ export default function ComparePage() {
 
           {loadingManifest ? (
             <div className="grid min-h-80 place-items-center text-sm text-slate-400">Loading site manifest…</div>
-          ) : calendarManifest ? (
+          ) : calendarManifest && !calendarError ? (
             <ComparisonViewer manifest={calendarManifest} pairId={CALENDAR_PAIR_ID} pol={pol} />
           ) : null}
         </>
