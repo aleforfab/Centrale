@@ -3,7 +3,7 @@
 This document is the **cloud owner's** runbook: console checks, cost guardrails,
 network correctness, and the order of operations. The application side (code,
 tests, build commands) is in [`DEPLOYMENT_VM.md`](DEPLOYMENT_VM.md) and
-[`docs/IMPLEMENTATION_HANDOFF.md`](docs/IMPLEMENTATION_HANDOFF.md).
+[`docs/ANAK_KRAKATAU_VM_BUILD.md`](docs/ANAK_KRAKATAU_VM_BUILD.md).
 
 Ground rule for this project: **we are a weekend workload with a $300 trial
 credit, aiming to stay well below $100.** That is a planning target, not a Google
@@ -245,8 +245,8 @@ ID, that is fine.
 8. **Running processing on the free Cloud Shell**, which has a small disk and a
    usage quota.
 9. **Believing a green CI run means the science is validated.** It means the
-   software runs; the scientific gaps are listed in
-   [`MIGRATION_STATUS.md`](MIGRATION_STATUS.md).
+   software runs; interpretation is not validated. See
+   [`docs/IMPLEMENTATION_VERIFICATION.md`](docs/IMPLEMENTATION_VERIFICATION.md).
 10. **Quoting a price from a document instead of the console.** Prices, credits
     and eligibility change; the console is authoritative.
 

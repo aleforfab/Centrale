@@ -2,7 +2,8 @@
 
 **Nothing in this file has been executed on the VM yet.** The deployment of `main` and the verification below remain pending; the VM currently serves an older build. Executing this section is required before any round-3 (rebrand) or map-fix claim is made publicly. It is the plan that
 follows the migration. Steps are ordered so each one can be verified before the
-next. Current state: [`MIGRATION_STATUS.md`](MIGRATION_STATUS.md).
+next. Current state: [`HACKATHON.md`](HACKATHON.md) and
+[`docs/IMPLEMENTATION_VERIFICATION.md`](docs/IMPLEMENTATION_VERIFICATION.md).
 
 Console-side work (billing, firewall, IAM, snapshots, IP, costs) lives in
 [`GCP_CHECKLIST.md`](GCP_CHECKLIST.md) and is owned by the project's Google Cloud

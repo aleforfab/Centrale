@@ -77,7 +77,7 @@ Read-only ASF search to re-confirm the stack (adapt flags to `cli.py discover`):
 python -m nisar.cli discover --bbox 105.4,-6.15,105.55,-6.03 --start 2026-08-01 --end 2026-10-01 --maturity PROVISIONAL --max 10
 ```
 Stop if the returning stack is not ascending frame 010 with five dates; update
-`agent-team/PLAN.md`’s inventory via PR instead of forcing it.
+the inventory in this file via PR instead of forcing it.
 
 ## 5. Build — pick one path
 
