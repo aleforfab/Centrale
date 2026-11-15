@@ -234,6 +234,7 @@ tiles:
     print(f"granules   : {len(chosen)}")
     print(f"download   : {total_bytes / 1024 ** 3:.2f} GiB")
     print(f"disk free  : {free / 1024 ** 3:.1f} GiB")
+    print(f"overlap    : {[round(v, 4) for v in (minx, miny, maxx, maxy)]}")
     print(f"bbox       : {bbox}")
     print(f"wrote      : {out}")
     print()
