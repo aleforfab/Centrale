@@ -280,12 +280,20 @@ def search_gcov(
         if not scene_name.startswith("NISAR_"):
             continue
         
-        # Get geometry if available
+        # Get geometry if available.
+        # asf_search returns `geometry` as a GeoJSON-style dict; older callers
+        # and tests may still pass WKT. Both are accepted so a real search never
+        # silently degrades to geometry=None, which would make every stack fail
+        # the bbox filter in group_into_stacks().
         geometry = None
-        if hasattr(r, "geometry") and r.geometry:
+        raw_geometry = getattr(r, "geometry", None)
+        if raw_geometry:
             try:
-                geometry = shapely.from_wkt(r.geometry)
-            except (shapely.errors.GEOSException, TypeError, ValueError) as exc:
+                if isinstance(raw_geometry, dict):
+                    geometry = shapely.geometry.shape(raw_geometry)
+                else:
+                    geometry = shapely.from_wkt(raw_geometry)
+            except (AttributeError, shapely.errors.GEOSException, TypeError, ValueError) as exc:
                 logger.warning("Unable to parse NISAR footprint: %s", exc)
         
         # Get URLs
