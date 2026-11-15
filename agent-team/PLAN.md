@@ -152,3 +152,17 @@ after freeze except reverts of visibly broken things.
   product copy unchanged; merge order 07 → 09 → 08.
 - Not in round 3: VM rebuild (A2), live-fetch operator guard (A3), Gate 2,
   `/tm/scan` procedural path internals, backend.
+
+## Round 3 merged & verified (2026-11-15)
+
+- #18 Time Machine Field Log + `/method` honesty register + 404 plate;
+  #19 design foundation (paper tokens, masthead, chapter nav, vocabulary classes);
+  #20 Observation Plate + Diptych. Merge order 07 → 09 → 08 respected.
+- Fresh-worktree verification @ `25878e4`: typecheck clean; **65 tests / 9 files**
+  (intentional deletions only); build OK incl. `/method` (194 B JS) and custom 404;
+  backend ruff clean, **157 passed**; SSR smoke all routes 200/404 with expected
+  markers. Browser-level check pending VM rebuild (DEPLOYMENT_VM.md §post-merge).
+- Docs sync 2026-11-15 (docs-only PR): README interface table & applications
+  section removed; HACKATHON.md phase status; IMPLEMENTATION_VERIFICATION.md
+  round-3 entry; superseded banners on TODO/REMAINING_WORK/IMPLEMENTATION_STATUS/
+  MIGRATION_STATUS; DEPLOYMENT_VM.md gained the post-merge rebuild procedure.
