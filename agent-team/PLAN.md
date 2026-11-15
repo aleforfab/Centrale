@@ -132,3 +132,23 @@ after freeze except reverts of visibly broken things.
   NEXT_PUBLIC_API_URL + verify deployed URL), A3 live-fetch operator guard
   design, Gate 2 Anak Krakatau build (go-ahead not given), havu.cc redesign
   (Track C — needs C0 decisions), integration verification pass.
+
+## Round 3 setup (2026-11-15, arena/09542992-centrale @ 7333923)
+
+- Round 2 merged: #14 hygiene+fixture-origin, #15 map (satellite-streets,
+  opacity 0.8, fitBounds 80/12, footprint `#ff8a3d`, ScaleControl, playback
+  pre-mount + visibility), #16 pages (LiveScanPanel shared; Time Machine own
+  scan dates; unified layer list; hero removed; post-scan handoff). Verified
+  merged main: `npm ci`, typecheck clean, **75 tests / 10 files pass**,
+  `next build` OK (routes `/`, `/compare`, `/time-machine`).
+- Worker 05 known-gap note was stale; presets are manifest-derived on main.
+- Worker 06 deferral: `sourceRegister.ts` + `source-register.json` retained
+  (backend tooling default + test). Frontend trio retirement assigned to slice 09.
+- Round 3 = **havu.cc-inspired rebrand**, briefs 07/08/09 + `docs/REDESIGN_GUIDE.md`.
+  Decisions locked (override before workers start or at PR review):
+  full visual rebrand; paper-light default; accent `#C2410C` (text) / `#FF8A3D`
+  (graphic); Archivo + IBM Plex Mono via runtime @import (no build-time fetch);
+  `/method` honesty register included; 404 restyled; no new deps; NISAR L-band
+  product copy unchanged; merge order 07 → 09 → 08.
+- Not in round 3: VM rebuild (A2), live-fetch operator guard (A3), Gate 2,
+  `/tm/scan` procedural path internals, backend.

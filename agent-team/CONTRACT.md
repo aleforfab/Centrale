@@ -126,3 +126,31 @@ Worker CANNOT decide (unchanged, plus):
 - The havu.cc-inspired visual redesign (Track C) — needs the maintainer's
   explicit decisions (accent, paper-light, `/method` page, scope).
 - Gate 2 (real Anak Krakatau build) — still awaits explicit go-ahead.
+
+## Round 3 (2026-11-15) — base `origin/main` @ `7333923`
+
+Supervisor branch: `arena/09542992-centrale`. All round-3 workers branch from
+`origin/main` @ `7333923` (round 2 merged: PRs #14/15/16). **Read
+`docs/REDESIGN_GUIDE.md` before any code — it is part of this contract.**
+Round 2 follow-through: worker 05's reported "playback limited to five fixed
+Krakatau dates" was stale — `scanFrameDates` on `main` derives presets from the
+manifest and `isKrakatauSite` gates eruption copy. Do not re-open.
+
+| Slice | Owns | Must NOT touch |
+| --- | --- | --- |
+| 07 design-foundation | `app/globals.css`, `app/redesign.css` (full rewrite, class names stable), `app/layout.tsx`, `components/AppShell.tsx`, `components/SiteNav.tsx`, `components/RegionSelector.tsx`, `components/LiveScanPanel.tsx` (restyle only) | `app/page.tsx`, `app/compare/page.tsx`, `app/time-machine/**`, `components/Map.tsx`, `WorldviewReview.tsx`, `TimeReview.tsx`, `ComparisonViewer.tsx`, backend, package files |
+| 08 dashboard-compare-plate | `app/page.tsx`, `app/compare/page.tsx`, `components/Map.tsx` (chrome only, API unchanged), `components/ComparisonViewer.tsx` | all of 07; `app/time-machine/**`; `WorldviewReview.tsx`, `TimeReview.tsx`; backend; package files; `layout.tsx` |
+| 09 timemachine-method-plate | `app/time-machine/page.tsx`, `components/WorldviewReview.tsx`, `components/TimeReview.tsx`, **new** `app/method/page.tsx`, **new** `app/not-found.tsx`, `tests/source-register.test.ts` (delete), `lib/sourceRegister.ts` (delete), `README.md` (register section reword only), plus **one announced append** `SiteNav.tsx` (+`/method` link) | `globals.css`, `redesign.css`, `layout.tsx`, `Map.tsx`, `app/page.tsx`, `app/compare/page.tsx`, `ComparisonViewer.tsx`, all backend paths, package files |
+
+Honesty invariants (§2), verification gates (§3), report format (§4) unchanged.
+**No new dependencies. No build-time font fetch** (runtime `@import` only).
+CSS variable names are fixed by REDESIGN_GUIDE §3.
+
+Merge order: **07 → 09 → 08**. 09 rebases onto 07; 08 rebases onto 07+09.
+Workers report against `7333923` and re-run the full matrix on newer merged
+bases when asked.
+
+Cannot decide (unchanged): token values/names, merge, VM access, deployment,
+Gate 2, admitting a `/method` claim that isn't backed by repo evidence, the
+ havu.cc rebrand scope (already fixed as "full rebrand, paper-light default,
+`#C2410C` accent text / `#FF8A3D` graphic, Archivo + IBM Plex Mono, `/method` included").
