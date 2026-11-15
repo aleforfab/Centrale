@@ -11,6 +11,10 @@ function trackFrame(granule: string): string {
   return match ? `Track ${match[1]} · Frame ${match[2]}` : "Track/frame not encoded in granule name";
 }
 
+function entryNumber(index: number): string {
+  return String(index + 1).padStart(2, "0");
+}
+
 export function WorldviewReview({ manifest, polarization }: { manifest: SiteManifest; polarization: string }) {
   const frames = useMemo(() => manifestToScanFrames(manifest, polarization), [manifest, polarization]);
   // Referentially stable across playback ticks: Map mounts every frame's
@@ -72,88 +76,119 @@ export function WorldviewReview({ manifest, polarization }: { manifest: SiteMani
   };
 
   if (frames.length === 0) {
-    return <div className="rounded-lg border border-amber-700/60 bg-amber-950/30 p-5 text-sm text-amber-100">No backscatter raster frames are available for {polarization}. Difference and change-mask layers are not used as playback frames.</div>;
+    return <div className="colophon">No backscatter raster frames are available for {polarization}. Difference and change-mask layers are not used as playback frames.</div>;
   }
 
   return (
-    <section className="space-y-4" aria-label="Worldview-style observation review">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-700 bg-[#111a24] p-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.16em] text-sky-300">{manifest.site.title}</p>
-          <h2 className="mt-1 text-lg font-semibold">{mode === "playback" ? current?.date : `${beforeDate} → ${afterDate}`}</h2>
-          <p className="mt-1 text-xs text-slate-400">{polarization} polarization · {frames.length} exact backscatter acquisition{frames.length === 1 ? "" : "s"} · {mode === "playback" ? `${framePhase(manifest, frames, current?.date ?? "")} · ${index + 1} of ${frames.length}` : "before / after"}</p>
+    <section className="space-y-5" aria-label="Worldview-style observation review">
+
+      {/* Entry header */}
+      <div className="plate">
+        <div className="plate__header">
+          <div>
+            <span className="plate__tag">
+              ENTRY {entryNumber(index)} — {mode === "playback" ? current?.date : `${beforeDate} → ${afterDate}`}
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <button type="button" className={`chapter-button ${mode === "playback" ? "" : "chapter-button--ghost"}`} aria-pressed={mode === "playback"} onClick={() => { setMode("playback"); setPlaying(false); }}>Animate stack</button>
+            <button type="button" className={`chapter-button ${mode === "compare" ? "" : "chapter-button--ghost"}`} aria-pressed={mode === "compare"} onClick={() => { setMode("compare"); setPlaying(false); }} disabled={frames.length < 2}>Before / after</button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button type="button" className={`tm-button ${mode === "playback" ? "" : "tm-button--ghost"}`} aria-pressed={mode === "playback"} onClick={() => { setMode("playback"); setPlaying(false); }}>Animate stack</button>
-          <button type="button" className={`tm-button ${mode === "compare" ? "" : "tm-button--ghost"}`} aria-pressed={mode === "compare"} onClick={() => { setMode("compare"); setPlaying(false); }} disabled={frames.length < 2}>Before / after</button>
+        <div className="plate__body">
+          <p className="footnote">
+            {polarization} · {frames.length} exact backscatter acquisition{frames.length === 1 ? "" : "s"} · {mode === "playback" ? `${framePhase(manifest, frames, current?.date ?? "")} · ${index + 1} of ${frames.length}` : "before / after"}
+          </p>
         </div>
       </div>
 
       {mode === "playback" && current ? (
         <>
-          <div className="h-[28rem] overflow-hidden rounded-lg">
-            <Map bbox={manifest.site.bbox} layers={playbackLayers} activeLayerId={current.layer.id} view={view} setView={setView} />
-          </div>
-          <div className="rounded-lg border border-slate-700 bg-[#111a24] p-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <button type="button" className="tm-button tm-button--primary" onClick={() => setPlaying((value) => !value)} aria-label={playing ? "Pause playback" : "Play playback"}>{playing ? "❚❚ Pause" : "▶ Play"}</button>
-              <span className="text-sm font-medium">Frame {index + 1} / {frames.length}</span>
-              <span className="text-sm text-slate-300">{current.date} · {current.polarization} · {trackFrame(current.granule)}</span>
-              <label className="ml-auto flex items-center gap-2 text-sm text-slate-300">Exact date
-                <input aria-label="Select exact acquisition date" type="date" value={current.date} min={frames[0].date} max={frames[frames.length - 1].date} onChange={(event) => {
-                  const found = frames.findIndex((frame) => frame.date === event.target.value);
-                  if (found < 0) setDateError(`No observation is installed on ${event.target.value}. Choose an exact acquisition date.`);
-                  else { setIndex(found); setDateError(null); setPlaying(false); }
-                }} />
-              </label>
+          {/* Map plate */}
+          <section className="plate">
+            <div className="plate__header">
+              <span className="plate__tag">FIG. {entryNumber(index)} — {polarization} BACKSCATTER</span>
+              <span className="plate__right-tag">{current.polarization} · {trackFrame(current.granule)}</span>
             </div>
-            <input className="mt-4 w-full accent-sky-400" type="range" min={0} max={frames.length - 1} step={1} value={index} onChange={(event) => { setIndex(Number(event.target.value)); setPlaying(false); }} aria-label="Observation timeline" />
-            <div className="mt-2 flex flex-wrap gap-2" aria-label="Exact acquisition date presets">
-              {datePresets.map((date) => {
-                const frameIndex = frames.findIndex((frame) => frame.date === date);
-                return <button type="button" key={date} className={`tm-chip ${frameIndex === index ? "tm-chip--active" : ""}`} disabled={frameIndex < 0} title={`Select exact acquisition ${date}`} onClick={() => { if (frameIndex < 0) return; setIndex(frameIndex); setPlaying(false); }}>{date}</button>;
-              })}
+            <div style={{ height: "28rem", overflow: "hidden" }}>
+              <Map bbox={manifest.site.bbox} layers={playbackLayers} activeLayerId={current.layer.id} view={view} setView={setView} />
             </div>
-            <p className="mt-3 text-xs text-slate-400">{current.layer.title ?? "Backscatter observation"}. Playback steps through installed observations only; there is no date interpolation.</p>
-          </div>
+            <div className="plate__caption">
+              {current.layer.title ?? "Backscatter observation"}. Playback steps through installed observations only; there is no date interpolation.
+            </div>
+          </section>
+
+          {/* Playback controls plate */}
+          <section className="plate">
+            <div className="plate__body">
+              <div className="flex flex-wrap items-center gap-3">
+                <button type="button" className="chapter-button chapter-button--primary" onClick={() => setPlaying((value) => !value)} aria-label={playing ? "Pause playback" : "Play playback"}>{playing ? "❚❚ Pause" : "▶ Play"}</button>
+                <span className="footnote">Frame {index + 1} / {frames.length} · {current.date}</span>
+                <label className="field" style={{ marginLeft: "auto" }}>
+                  <span>Exact date</span>
+                  <input aria-label="Select exact acquisition date" type="date" value={current.date} min={frames[0].date} max={frames[frames.length - 1].date} onChange={(event) => {
+                    const found = frames.findIndex((frame) => frame.date === event.target.value);
+                    if (found < 0) setDateError(`No observation is installed on ${event.target.value}. Choose an exact acquisition date.`);
+                    else { setIndex(found); setDateError(null); setPlaying(false); }
+                  }} />
+                </label>
+              </div>
+              <input className="mt-4 w-full" style={{ accentColor: "var(--accent)" }} type="range" min={0} max={frames.length - 1} step={1} value={index} onChange={(event) => { setIndex(Number(event.target.value)); setPlaying(false); }} aria-label="Observation timeline" />
+
+              {/* Frame strip — mono date buttons */}
+              <div className="mt-3 flex flex-wrap gap-2" aria-label="Exact acquisition date presets">
+                {datePresets.map((date) => {
+                  const frameIndex = frames.findIndex((frame) => frame.date === date);
+                  const isActive = frameIndex === index;
+                  return <button type="button" key={date} className={`chapter-button${isActive ? "" : " chapter-button--ghost"}`} style={isActive ? { borderBottom: "2px solid var(--accent)" } : undefined} disabled={frameIndex < 0} title={`Select exact acquisition ${date}`} onClick={() => { if (frameIndex < 0) return; setIndex(frameIndex); setPlaying(false); }}>{date}{frameIndex < 0 ? " · unavailable" : ""}</button>;
+                })}
+              </div>
+            </div>
+          </section>
         </>
       ) : (
         <>
-          <div className="rounded-lg border border-slate-700 bg-[#111a24] p-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="tm-calendar__label">Before acquisition
-                <input type="date" value={beforeDate} min={frames[0].date} max={frames[frames.length - 1].date} onChange={(event) => selectCalendarDate(event.target.value, "before")} aria-label="Before acquisition date" />
-              </label>
-              <label className="tm-calendar__label">After acquisition
-                <input type="date" value={afterDate} min={frames[0].date} max={frames[frames.length - 1].date} onChange={(event) => selectCalendarDate(event.target.value, "after")} aria-label="After acquisition date" />
-              </label>
+          {/* Compare controls plate */}
+          <section className="plate">
+            <div className="plate__body">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="field">Before acquisition
+                  <input type="date" value={beforeDate} min={frames[0].date} max={frames[frames.length - 1].date} onChange={(event) => selectCalendarDate(event.target.value, "before")} aria-label="Before acquisition date" />
+                </label>
+                <label className="field">After acquisition
+                  <input type="date" value={afterDate} min={frames[0].date} max={frames[frames.length - 1].date} onChange={(event) => selectCalendarDate(event.target.value, "after")} aria-label="After acquisition date" />
+                </label>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2" aria-label="Exact date presets">
+                {datePresets.map((date) => <button type="button" className={`chapter-button${date === beforeDate || date === afterDate ? "" : " chapter-button--ghost"}`} key={date} title={`Select exact date ${date}`} onClick={() => {
+                  if (!beforeDate || beforeDate === afterDate) setBeforeDate(date);
+                  else setAfterDate(date);
+                  setDateError(null);
+                }}>{date}</button>)}
+              </div>
+              {dateError && <p className="colophon mt-3" role="alert">{dateError}</p>}
+              {(!compareDatesAvailable || dateError) && <p className="colophon mt-3">Choose two exact installed dates in chronological order. No substitute date or layer is used.</p>}
             </div>
-            <div className="mt-3 flex flex-wrap gap-2" aria-label="Exact date presets">
-              {datePresets.map((date) => <button type="button" className={`tm-chip ${date === beforeDate || date === afterDate ? "tm-chip--active" : ""}`} key={date} title={`Select exact date ${date}`} onClick={() => {
-                if (!beforeDate || beforeDate === afterDate) setBeforeDate(date);
-                else setAfterDate(date);
-                setDateError(null);
-              }}>{date}</button>)}
-            </div>
-            {dateError && <p className="mt-3 text-sm text-amber-200" role="alert">{dateError}</p>}
-            {(!compareDatesAvailable || dateError) && <p className="mt-3 text-sm text-amber-200">Choose two exact installed dates in chronological order. No substitute date or layer is used.</p>}
-          </div>
+          </section>
           {compareDatesAvailable && <ComparisonViewer manifest={compareManifest} pairId="time-machine-exact-selection" pol={polarization} />}
         </>
       )}
 
-      {mode === "playback" && dateError && <p className="text-sm text-amber-200" role="alert">{dateError}</p>}
+      {mode === "playback" && dateError && <p className="colophon" role="alert">{dateError}</p>}
 
-      <div className="rounded-lg border border-slate-700 bg-[#111a24] p-4">
-        <button type="button" className="text-sm font-medium text-sky-300 underline underline-offset-4" aria-expanded={showProvenance} onClick={() => setShowProvenance((value) => !value)}>Exact acquisitions and provenance</button>
-        {showProvenance && <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[680px] text-left text-xs">
-            <thead className="text-slate-400"><tr><th className="p-2">Acquisition date</th><th className="p-2">Polarization</th><th className="p-2">Product</th><th className="p-2">CRID</th><th className="p-2">Maturity</th><th className="p-2">Source</th><th className="p-2">Granule</th></tr></thead>
-            <tbody>{frames.map((frame) => <tr key={`${frame.date}-${frame.layer.id}`} className="border-t border-slate-700"><td className="p-2">{frame.date}</td><td className="p-2">{frame.polarization}</td><td className="p-2">{frame.layer.kind}</td><td className="p-2">{frame.crid}</td><td className="p-2">{frame.maturity}</td><td className="p-2">{frame.source}</td><td className="p-2 font-mono">{frame.granule}</td></tr>)}</tbody>
-          </table>
-          <p className="mt-3 text-xs text-slate-400">{manifest.site.caveat} Product maturity remains {manifest.source.maturity}; this UI does not claim validation or scientific review.</p>
-        </div>}
-      </div>
+      {/* Provenance disclosure — .rule-table */}
+      <section className="plate">
+        <div className="plate__body">
+          <button type="button" className="footnote" style={{ color: "var(--accent)", cursor: "pointer", background: "none", border: "none", padding: 0, textDecoration: "underline", textUnderlineOffset: "4px" }} aria-expanded={showProvenance} onClick={() => setShowProvenance((value) => !value)}>Exact acquisitions and provenance</button>
+          {showProvenance && <div className="mt-3 overflow-x-auto">
+            <table className="rule-table">
+              <thead><tr><th>Acquisition date</th><th>Polarization</th><th>Product</th><th>CRID</th><th>Maturity</th><th>Source</th><th>Granule</th></tr></thead>
+              <tbody>{frames.map((frame) => <tr key={`${frame.date}-${frame.layer.id}`}><td>{frame.date}</td><td>{frame.polarization}</td><td>{frame.layer.kind}</td><td>{frame.crid}</td><td>{frame.maturity}</td><td>{frame.source}</td><td style={{ fontFamily: "var(--font-mono)" }}>{frame.granule}</td></tr>)}</tbody>
+            </table>
+            <p className="footnote mt-3">{manifest.site.caveat} Product maturity remains {manifest.source.maturity}; this UI does not claim validation or scientific review.</p>
+          </div>}
+        </div>
+      </section>
     </section>
   );
 }

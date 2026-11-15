@@ -3,8 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Dancing with the SARs — exact NISAR backscatter, measured change",
-  description:
-    "Installed NISAR L-band GCOV products with exact dates, measured change statistics and full provenance. PROVISIONAL data; not a validated scientific result.",
+  description: "Installed NISAR L-band GCOV products with exact dates, measured change statistics and full provenance. PROVISIONAL data; not a validated scientific result.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

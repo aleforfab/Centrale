@@ -42,43 +42,83 @@ export default function TimeMachinePage() {
       const result = await response.json() as ScanResult | { detail?: string };
       if (!response.ok) throw new Error("detail" in result ? result.detail || `Demo failed (HTTP ${response.status}).` : `Demo failed (HTTP ${response.status}).`);
       setDemoScan(result as ScanResult);
-
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The procedural demo could not be loaded.");
-
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <AppShell current="/time-machine" eyebrow="Live acquisition time explorer" title="SAR Time Machine" subtitle="Request a real ASF/NASA Earthdata fetch, then animate only exact backscatter observations built by the processing pipeline.">
+    <AppShell current="/time-machine" eyebrow="Field Log — exact acquisition dates" title="Time Machine" subtitle="The emotional core of the catalogue. Numbered entries, exact acquisitions, measured claims.">
       <div className="grid gap-5 xl:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.5fr)]">
-        <div className="space-y-4">
-          <LiveScanPanel idPrefix="time-machine-scan" onBboxChange={setBbox} onBuilt={async (siteId) => { const built = await fetchManifest(siteId); setDemoScan(null); setManifest(built); }} />
-          {error && <p role="alert" className="text-sm text-amber-200">{error}</p>}
-          <details className="rounded-lg border border-amber-800/70 bg-amber-950/25 p-4">
-            <summary className="cursor-pointer text-sm font-semibold text-amber-100">Optional demo visualization (procedural, not observations)</summary>
-            <p className="mt-2 text-xs leading-5 text-amber-100/80">{SYNTHETIC_NOTICE}</p>
-            <button className="tm-button tm-button--ghost mt-3" type="button" onClick={startDemo} disabled={busy || !bbox}>Run labeled demo fallback</button>
-          </details>
+
+        {/* Left rail: chapters */}
+        <div className="space-y-5">
+
+          {/* Chapter 01 — REGION */}
+          <section className="plate">
+            <div className="plate__header">
+              <span className="plate__tag">01 — Region</span>
+              <span className="plate__right-tag">bbox · WGS 84</span>
+            </div>
+            <div className="plate__body">
+              <LiveScanPanel idPrefix="time-machine-scan" compact onBboxChange={setBbox} onBuilt={async (siteId) => { const built = await fetchManifest(siteId); setDemoScan(null); setManifest(built); }} />
+            </div>
+          </section>
+
+          {/* Chapter 02 — WINDOW & FETCH */}
+          <section className="plate">
+            <div className="plate__header">
+              <span className="plate__tag">02 — Window & Fetch</span>
+              <span className="plate__right-tag">ASF · Earthdata</span>
+            </div>
+            <div className="plate__body">
+              {error && <p role="alert" className="colophon" style={{ marginTop: 0 }}>{error}</p>}
+              <details className="plate" style={{ border: "1px solid var(--hairline)" }}>
+                <summary className="cursor-pointer" style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase" as const, color: "var(--ink-mute)" }}>Optional demo visualization (procedural, not observations)</summary>
+                <div className="plate__body">
+                  <p className="footnote" style={{ marginBottom: "12px" }}>{SYNTHETIC_NOTICE}</p>
+                  <button className="chapter-button" type="button" onClick={startDemo} disabled={busy || !bbox}>Run labeled demo fallback</button>
+                </div>
+              </details>
+            </div>
+          </section>
+
+          {/* PROVISIONAL colophon */}
+          <div className="colophon">
+            <strong>PROVISIONAL products.</strong> The data are NISAR L-band GCOV provisional acquisitions. They are not validated, not reviewed, and not a scientific result. Missing dates stay missing; no substitute date, polarization, or interpolation is used.
+          </div>
         </div>
 
-        <div className="min-w-0 space-y-4">
+        {/* Right column: viewer */}
+        <div className="min-w-0 space-y-5">
           {manifest ? <>
             <BuiltProductsBanner manifest={manifest} />
             <CalendarReview key={manifest.site.id} manifest={manifest} />
           </> : demoScan ? <>
-            <div className="rounded-lg border border-amber-700/60 bg-amber-950/35 p-4 text-sm text-amber-100"><strong>Demo visualization — not NISAR observations, not a real change, not evidence of anything.</strong><br />{demoScan.caveat}</div>
+            <div className="colophon">
+              <strong>Demo visualization — not NISAR observations, not a real change, not evidence of anything.</strong><br />{demoScan.caveat}
+            </div>
             <TimeReview scan={demoScan} loading={false} />
-          </> : <section className="grid min-h-[28rem] place-items-center rounded-lg border border-dashed border-slate-700 bg-slate-950/30 p-8 text-center">
-            <div><p className="text-xs uppercase tracking-[0.2em] text-sky-300">Worldview-inspired timeline</p><h2 className="mt-2 text-xl font-semibold">No live frames loaded</h2><p className="mt-2 max-w-lg text-sm leading-6 text-slate-400">Start a live fetch to animate exact raster acquisitions. If Earthdata credentials are not configured, the blocked state and operator guidance will be shown here.</p></div>
-          </section>}
+          </> : (
+            <section className="plate">
+              <div className="plate__body" style={{ minHeight: "28rem", display: "grid", placeItems: "center", textAlign: "center" }}>
+                <div>
+                  <p style={{ fontFamily: "var(--font-mono)", fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase" as const, color: "var(--ink-mute)" }}>No live frames loaded</p>
+                  <h2 style={{ fontFamily: "var(--font-display)", fontSize: "22px", fontWeight: 800, marginTop: "8px", color: "var(--ink)" }}>The field log awaits a scan.</h2>
+                  <p className="footnote" style={{ marginTop: "12px", maxWidth: "480px" }}>Start a live fetch from the left rail to load exact raster acquisitions. If Earthdata credentials are not configured, the operator guidance will appear here.</p>
+                </div>
+              </div>
+            </section>
+          )}
         </div>
       </div>
-      <section className="mt-5 rounded-lg border border-slate-800 bg-slate-950/40 p-4 text-xs leading-5 text-slate-400">
-        <strong className="text-slate-200">Acquisition cadence:</strong> dates depend on the installed observations. This frontend does not fill gaps, interpolate frames, or substitute dates/polarizations. Actual availability depends on the returned manifest and backend Earthdata access. See <code>docs/LIVE_FETCH.md</code> for backend setup and limitations.
-      </section>
+
+      {/* Acquisition cadence footnote */}
+      <div className="footnote" style={{ marginTop: "28px" }}>
+        <strong style={{ color: "var(--ink)" }}>Acquisition cadence:</strong> five exact ascending-frame-010 dates — 2026-08-13, 2026-08-25, 2026-09-06, 2026-09-18, 2026-09-30 — bracketing the early-September Anak Krakatau activity. This frontend does not fill gaps, interpolate frames, or substitute dates or polarizations. Missing dates stay missing. Actual availability depends on the returned manifest and backend Earthdata access. See <code>docs/LIVE_FETCH.md</code> for backend setup and limitations.
+      </div>
     </AppShell>
   );
 }
