@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { LiveScanPanel, BuiltProductsBanner } from "@/components/LiveScanPanel";
 import { type Bbox } from "@/components/RegionSelector";
@@ -8,7 +8,8 @@ import { TimeReview } from "@/components/TimeReview";
 import { CalendarReview } from "@/components/CalendarReview";
 import { DEFAULT_BBOX, SCAN_DATES, SYNTHETIC_NOTICE, isValidBbox, type ScanResult } from "@/lib/timeMachine";
 import { fetchManifest } from "@/lib/liveFetch";
-import type { SiteManifest } from "@/lib/types";
+import { api } from "@/lib/api";
+import type { SiteManifest, SiteSummary } from "@/lib/types";
 
 export default function TimeMachinePage() {
   const [bbox, setBbox] = useState<Bbox | null>(DEFAULT_BBOX);
@@ -16,6 +17,52 @@ export default function TimeMachinePage() {
   const [demoScan, setDemoScan] = useState<ScanResult | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [sites, setSites] = useState<SiteSummary[]>([]);
+  const [siteId, setSiteId] = useState("");
+  const [loadingSites, setLoadingSites] = useState(true);
+
+  // Show what is already installed. A live fetch is optional on this page, so the
+  // field log must never read as empty while the catalogue holds a built site.
+  useEffect(() => {
+    let active = true;
+    api
+      .sites()
+      .then((list) => {
+        if (!active) return;
+        setSites(list);
+        setSiteId((current) => current || list[0]?.id || "");
+      })
+      .catch((reason: unknown) => {
+        if (active) setError(reason instanceof Error ? reason.message : "The installed product catalogue could not be loaded.");
+      })
+      .finally(() => {
+        if (active) setLoadingSites(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!siteId) {
+      setManifest(null);
+      return;
+    }
+    let active = true;
+    api
+      .site(siteId)
+      .then((loaded) => {
+        if (!active) return;
+        setDemoScan(null);
+        setManifest(loaded);
+      })
+      .catch((reason: unknown) => {
+        if (active) setError(reason instanceof Error ? reason.message : "The installed site manifest could not be loaded.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [siteId]);
 
   const startDemo = async () => {
     setError("");
@@ -63,7 +110,7 @@ export default function TimeMachinePage() {
               <span className="plate__right-tag">bbox · WGS 84</span>
             </div>
             <div className="plate__body">
-              <LiveScanPanel idPrefix="time-machine-scan" compact onBboxChange={setBbox} onBuilt={async (siteId) => { const built = await fetchManifest(siteId); setDemoScan(null); setManifest(built); }} />
+              <LiveScanPanel idPrefix="time-machine-scan" compact onBboxChange={setBbox} onBuilt={async (id) => { const list = await api.sites(); setSites(list); setSiteId(id); const built = await fetchManifest(id); setDemoScan(null); setManifest(built); }} />
             </div>
           </section>
 
@@ -94,6 +141,22 @@ export default function TimeMachinePage() {
         {/* Right column: viewer */}
         <div className="min-w-0 space-y-5">
           {manifest ? <>
+            {sites.length > 1 && (
+              <section className="plate">
+                <div className="plate__header">
+                  <span className="plate__tag">Installed site</span>
+                  <span className="plate__right-tag">{sites.length} in catalogue</span>
+                </div>
+                <div className="plate__body">
+                  <label className="tm-calendar__label">
+                    Site
+                    <select value={siteId} onChange={(event) => setSiteId(event.target.value)}>
+                      {sites.map((site) => <option key={site.id} value={site.id}>{site.title}</option>)}
+                    </select>
+                  </label>
+                </div>
+              </section>
+            )}
             <BuiltProductsBanner manifest={manifest} />
             <CalendarReview key={manifest.site.id} manifest={manifest} />
           </> : demoScan ? <>
@@ -105,9 +168,9 @@ export default function TimeMachinePage() {
             <section className="plate">
               <div className="plate__body" style={{ minHeight: "28rem", display: "grid", placeItems: "center", textAlign: "center" }}>
                 <div>
-                  <p style={{ fontFamily: "var(--font-mono)", fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase" as const, color: "var(--ink-mute)" }}>No live frames loaded</p>
-                  <h2 style={{ fontFamily: "var(--font-display)", fontSize: "22px", fontWeight: 800, marginTop: "8px", color: "var(--ink)" }}>The field log awaits a scan.</h2>
-                  <p className="footnote" style={{ marginTop: "12px", maxWidth: "480px" }}>Start a live fetch from the left rail to load exact raster acquisitions. If Earthdata credentials are not configured, the operator guidance will appear here.</p>
+                  <p style={{ fontFamily: "var(--font-mono)", fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase" as const, color: "var(--ink-mute)" }}>{loadingSites ? "Reading product catalogue" : "No built site installed"}</p>
+                  <h2 style={{ fontFamily: "var(--font-display)", fontSize: "22px", fontWeight: 800, marginTop: "8px", color: "var(--ink)" }}>{loadingSites ? "Loading installed acquisitions." : "No built site is installed."}</h2>
+                  <p className="footnote" style={{ marginTop: "12px", maxWidth: "480px" }}>{loadingSites ? "Reading the installed product catalogue. Nothing is fetched from ASF for this step." : "Built sites appear here automatically once the processing pipeline has written a manifest. A live fetch is optional and only adds new observations; frames are never fabricated or interpolated."}</p>
                 </div>
               </div>
             </section>

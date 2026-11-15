@@ -153,7 +153,12 @@ class TestSearchGcov:
             "sceneName": "NISAR_L2_PR_GCOV_012_122_D_067_4005_DHDH_A_20260701T160541_20260701T160622_P05023_P_F_J_001",
             "bytes": 1000000,
         }
-        mock_result.geometry = "POLYGON((-108 -76, -100 -76, -100 -74.5, -108 -74.5, -108 -76))"
+        mock_result.geometry = {
+            "type": "Polygon",
+            "coordinates": [
+                [[-108, -76], [-100, -76], [-100, -74.5], [-108, -74.5], [-108, -76]]
+            ],
+        }
         mock_result.get_urls.return_value = ["https://example.com/granule.h5"]
         
         mock_search.return_value = [mock_result]
@@ -172,6 +177,13 @@ class TestSearchGcov:
         
         assert len(granules) == 1
         assert granules[0].granule_name == "NISAR_L2_PR_GCOV_012_122_D_067_4005_DHDH_A_20260701T160541_20260701T160622_P05023_P_F_J_001"
+        # asf_search ships GeoJSON geometry; it must not degrade to None, or
+        # every stack is dropped by the bbox filter in group_into_stacks().
+        assert granules[0].geometry is not None
+
+        stacks = group_into_stacks(granules, bbox)
+        assert len(stacks) == 1
+        assert stacks[0].count == 1
 
     def test_search_gcov_no_network(self):
         """Test search_gcov when asf_search is not available."""

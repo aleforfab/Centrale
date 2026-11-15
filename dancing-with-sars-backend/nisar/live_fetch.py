@@ -217,19 +217,45 @@ def _write_site_config(
     return path
 
 
+def _granule_download_bytes(product: Any) -> int | None:
+    """Return the HDF5 payload size ASF reports for a granule.
+
+    ``properties['bytes']`` is a dict keyed by filename, and each value is itself
+    a dict (``{"bytes": ..., "format": ...}``). Only ``.h5`` entries count towards
+    the download budget; browse PNGs are excluded. Returns ``None`` when no size
+    can be determined, so callers can refuse rather than guess.
+    """
+    raw = getattr(product, "properties", {}).get("bytes")
+    if isinstance(raw, dict):
+        total = 0
+        found = False
+        for name, item in raw.items():
+            if not str(name).lower().endswith(".h5"):
+                continue
+            value = item.get("bytes") if isinstance(item, dict) else item
+            try:
+                total += int(value)
+            except (TypeError, ValueError):
+                continue
+            found = True
+        return total if found else None
+    try:
+        return int(float(raw))
+    except (TypeError, ValueError):
+        return None
+
+
 def _enforce_size_limit(matches: list[tuple[Any, ...]], limit_bytes: int) -> int:
     """Refuse to download when ASF does not report sizes or the total is too large."""
     total = 0
     for index, match in enumerate(matches):
         product = match[0]
-        raw = getattr(product, "properties", {}).get("bytes")
-        try:
-            size = int(float(raw))
-        except (TypeError, ValueError):
+        size = _granule_download_bytes(product)
+        if size is None:
             raise LiveFetchError(
                 "ASF did not report a granule size; refusing an unbounded download. "
                 "Use fewer granules or precomputed products instead."
-            ) from None
+            )
         if size <= 0:
             raise LiveFetchError(f"ASF reported an invalid size for granule {index + 1}")
         total += size
