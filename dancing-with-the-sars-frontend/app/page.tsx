@@ -7,12 +7,14 @@ import { Map, type MapView } from "@/components/Map";
 import { SiteSelector } from "@/components/SiteSelector";
 import { api } from "@/lib/api";
 import { pairDates } from "@/lib/comparison";
+import { visibleSites, type SiteSummary } from "@/lib/types";
+import { withoutRemovedDisclaimer } from "@/lib/disclaimer";
+import { initialSiteId, rememberSite } from "@/lib/siteChoice";
 import type {
   Pair,
   PairStats,
   ProductLayer,
   SiteManifest,
-  SiteSummary,
 } from "@/lib/types";
 
 /*
@@ -132,13 +134,18 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [openGranule, setOpenGranule] = useState<string | null>(null);
 
+  // Keep the chosen site in the URL so other pages open on the same one.
+  useEffect(() => { if (siteId) rememberSite(siteId); }, [siteId]);
+
   useEffect(() => {
     let active = true;
     api.sites()
       .then((siteList) => {
         if (!active) return;
-        setSites(siteList);
-        setSiteId((current) => current || siteList.find((site) => site.id === "anak-krakatau")?.id || siteList[0]?.id || "");
+        // Synthetic rehearsal fixtures are not offered as a site choice.
+        const visible = visibleSites(siteList);
+        setSites(visible);
+        setSiteId((current) => current || initialSiteId(visible));
       })
       .catch((reason: unknown) => {
         if (active) setError(errorMessage(reason));
@@ -200,7 +207,7 @@ export default function Home() {
     if (backscatterLayer) selectLayer(backscatterLayer.id);
   };
   const built = async (id: string) => {
-    const list = await api.sites();
+    const list = visibleSites(await api.sites());
     if (!list.some((site) => site.id === id)) throw new Error("Built site is not yet in the product catalog.");
     setSites(list); setBuiltId(id); setSiteId(id); setRevision((value) => value + 1);
   };
@@ -337,8 +344,7 @@ export default function Home() {
                 <h3 className={`${DISPLAY} mt-3 text-[20px] font-extrabold leading-[1.15] tracking-[-0.02em] text-[color:var(--ink)]`}>
                   {manifest.site.title}
                 </h3>
-                <p className="mt-2 text-[13px] leading-[1.55] text-[color:var(--ink-soft)]">{manifest.site.description}</p>
-                <p className={`${COLOPHON} mt-3`}>{manifest.site.caveat}</p>
+                <p className="mt-2 text-[13px] leading-[1.55] text-[color:var(--ink-soft)]">{withoutRemovedDisclaimer(manifest.site.description)}</p>
                 <div className="tm-chip-row mt-3 flex flex-wrap gap-1.5">
                   {[manifest.source.mission, `${manifest.source.band}-band`, manifest.source.product, manifest.source.maturity, `CRID ${manifest.source.crid}`].map((tag) => (
                     <span key={tag} className={CHIP}>{tag}</span>

@@ -214,3 +214,39 @@ def test_main_imports_ee_lazily_and_config_has_no_data_gap_constants():
         check=False,
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_synthetic_rehearsal_sites_are_flagged(tmp_path, monkeypatch):
+    """The demo fixture is flagged so the UI can keep it out of site choices."""
+    from nisar.models import Manifest
+    from routers.sites import _is_synthetic
+
+    monkeypatch.setattr(Config, "PRODUCTS_DIR", tmp_path)
+    monkeypatch.setattr(Config, "ENABLE_SENTINEL1_FALLBACK", False)
+    _write_site(tmp_path)
+
+    demo = tmp_path / "demo-fixture"
+    demo.mkdir()
+    manifest = json.loads((tmp_path / "test-site" / "manifest.json").read_text(encoding="utf-8"))
+    manifest["site"].update(
+        {
+            "id": "demo-fixture",
+            "title": "Synthetic rehearsal site",
+            "caveat": (
+                "Synthetic fixture data: not a real observation, not a real change, "
+                "and not evidence of anything."
+            ),
+        }
+    )
+    (demo / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    with TestClient(main.app) as client:
+        summaries = {item["id"]: item for item in client.get("/api/sites").json()}
+    assert summaries["demo-fixture"]["synthetic"] is True
+    assert summaries["test-site"]["synthetic"] is False
+
+    real = Manifest.model_validate(manifest)
+    real.site.id = "real-site"
+    real.site.title = "Anak Krakatau - NISAR GCOV 2026"
+    real.site.caveat = "Real NISAR L2 GCOV observations."
+    assert _is_synthetic(real) is False

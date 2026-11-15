@@ -10,7 +10,7 @@ import {
   processingIdentity,
   usablePairs,
 } from "@/lib/comparison";
-import type { SiteManifest } from "@/lib/types";
+import type { ProductLayer, SiteManifest } from "@/lib/types";
 import { mapStyleForView, type MapView } from "@/components/Map";
 import { api } from "@/lib/api";
 import { resolveTileUrl } from "@/lib/tileUrl";
@@ -49,6 +49,73 @@ export interface ComparisonViewerProps {
   setView?: (view: MapView) => void;
   falseColor?: boolean;
   onFalseColorChange?: (enabled: boolean) => void;
+  /** Difference / change-mask products drawn over both dates. */
+  overlayLayerIds?: string[];
+}
+
+const FALLBACK_STYLE = (dark: boolean): mapboxgl.Style =>
+  ({
+    version: 8,
+    sources: {},
+    layers: [
+      {
+        id: "dark-background",
+        type: "background",
+        paint: { "background-color": dark ? "#0D0C0A" : "#14120F" },
+      },
+    ],
+  }) as unknown as mapboxgl.Style;
+
+/**
+ * Mount or update one product raster on a comparison map.
+ *
+ * Deliberately does NOT gate on `map.isStyleLoaded()`: that waits for every
+ * basemap source cache, so a `once("style.load")` handler that checks it
+ * bails out (style.load fires before basemap tiles finish) and the raster
+ * never appears. `style.load` means the style JSON is ready for
+ * addSource/addLayer even while basemap tiles are still fetching.
+ */
+function syncRaster(
+  map: mapboxgl.Map,
+  sourceId: string,
+  layerId: string,
+  layer: ProductLayer,
+  opacity: number,
+  palette: boolean,
+  mountedUrls: Map<string, string>,
+) {
+  const tiles = [resolveTileUrl(layer.tile_url_template, api.baseUrl)];
+  const existing = map.getSource(sourceId) as mapboxgl.RasterTileSource | undefined;
+  if (existing) {
+    if (mountedUrls.get(sourceId) !== tiles[0]) {
+      existing.setTiles(tiles);
+      mountedUrls.set(sourceId, tiles[0]);
+    }
+    if (layer.kind === "backscatter") setObservationPalette(map, layerId, palette);
+    return;
+  }
+  map.addSource(sourceId, {
+    type: "raster",
+    tiles,
+    tileSize: 256,
+    minzoom: layer.min_zoom,
+    maxzoom: layer.max_zoom,
+  });
+  mountedUrls.set(sourceId, tiles[0]);
+  map.addLayer({
+    id: layerId,
+    type: "raster",
+    source: sourceId,
+    paint: { "raster-opacity": opacity },
+  });
+  if (layer.kind === "backscatter") setObservationPalette(map, layerId, palette);
+}
+
+/** Remove a previously mounted overlay raster, if present. */
+function removeRaster(map: mapboxgl.Map, sourceId: string, layerId: string, mountedUrls: Map<string, string>) {
+  if (map.getLayer(layerId)) map.removeLayer(layerId);
+  if (map.getSource(sourceId)) map.removeSource(sourceId);
+  mountedUrls.delete(sourceId);
 }
 
 function camerasMatch(a: mapboxgl.Map, b: mapboxgl.Map): boolean {
@@ -63,12 +130,10 @@ function camerasMatch(a: mapboxgl.Map, b: mapboxgl.Map): boolean {
   );
 }
 
-export function ComparisonViewer({ manifest, pairId, pol, view: controlledView, setView: onViewChange, falseColor: controlledColor, onFalseColorChange }: ComparisonViewerProps) {
+export function ComparisonViewer({ manifest, pairId, pol, view: controlledView, setView: onViewChange, falseColor: controlledColor, onFalseColorChange, overlayLayerIds = [] }: ComparisonViewerProps) {
   const [localColor, setLocalColor] = useState(false);
   const falseColor = controlledColor ?? localColor;
   const setFalseColor = (enabled: boolean) => { setLocalColor(enabled); onFalseColorChange?.(enabled); };
-  const colorRef = useRef(falseColor);
-  colorRef.current = falseColor;
   const [localView, setLocalView] = useState<MapView>("sar");
   const view = controlledView ?? localView;
   const setView = (next: MapView) => { setLocalView(next); onViewChange?.(next); };
@@ -79,6 +144,12 @@ export function ComparisonViewer({ manifest, pairId, pol, view: controlledView, 
   const beforeMap = useRef<mapboxgl.Map | null>(null);
   const afterMap = useRef<mapboxgl.Map | null>(null);
   const mountedView = useRef<MapView | null>(null);
+  const fallbackUsed = useRef(false);
+  const mountedUrls = useRef(new Map<string, string>());
+  // A map only accepts addSource/addLayer once its style JSON is ready. This
+  // flag tracks `style.load` per map — deliberately not `isStyleLoaded()`,
+  // which also waits for every basemap tile and so can stay false for a while.
+  const styleReady = useRef({ before: false, after: false });
 
   const result = useMemo(() => buildComparison(manifest, pairId, pol), [manifest, pairId, pol]);
   const selection = result.ok ? result.selection : null;
@@ -87,6 +158,43 @@ export function ComparisonViewer({ manifest, pairId, pol, view: controlledView, 
 
   const beforeLayerId = selection?.before.layer.id;
   const afterLayerId = selection?.after.layer.id;
+
+  // Latest desired overlays, read by the permanent style.load handler that is
+  // registered when the maps are created (see below).
+  const desiredRef = useRef({ beforeLayerId, afterLayerId, overlayLayerIds, layers: manifest.layers, falseColor });
+  desiredRef.current = { beforeLayerId, afterLayerId, overlayLayerIds, layers: manifest.layers, falseColor };
+
+  const syncOverlays = () => {
+    const desired = desiredRef.current;
+    const sides: Array<[mapboxgl.Map | null, string | undefined]> = [
+      [beforeMap.current, desired.beforeLayerId],
+      [afterMap.current, desired.afterLayerId],
+    ];
+    const before = beforeMap.current;
+    for (const [instance, layerId] of sides) {
+      if (!instance || !layerId) continue;
+      const ready = instance === before ? styleReady.current.before : styleReady.current.after;
+      if (!ready) continue;
+      const layer = desired.layers.find((item) => item.id === layerId);
+      if (!layer) continue;
+      const side = instance === before ? "before" : "after";
+      syncRaster(instance, `comparison-${side}`, `comparison-${side}-raster`, layer, 0.92, desired.falseColor, mountedUrls.current);
+      // Change-product overlays (difference / masks) drawn over both dates.
+      const overlays = desired.layers.filter((item) => desired.overlayLayerIds.includes(item.id));
+      for (const overlay of overlays) {
+        syncRaster(instance, `comparison-overlay-${side}-${overlay.id}`, `comparison-overlay-${side}-${overlay.id}-raster`, overlay, 0.65, desired.falseColor, mountedUrls.current);
+      }
+      for (const mountedId of Array.from(mountedUrls.current.keys())) {
+        if (!mountedId.startsWith(`comparison-overlay-${side}-`)) continue;
+        const overlayId = mountedId.slice(`comparison-overlay-${side}-`.length);
+        if (!desired.overlayLayerIds.includes(overlayId)) {
+          removeRaster(instance, mountedId, `${mountedId}-raster`, mountedUrls.current);
+        }
+      }
+    }
+  };
+  const syncOverlaysRef = useRef(syncOverlays);
+  syncOverlaysRef.current = syncOverlays;
 
   // Create both maps once. Interaction stays enabled, but every camera change on
   // one map is mirrored to the other, so the two dates always show the same view.
@@ -126,6 +234,7 @@ export function ComparisonViewer({ manifest, pairId, pol, view: controlledView, 
     link(first, second);
     link(second, first);
 
+    styleReady.current = { before: false, after: false };
     for (const instance of [first, second]) {
       instance.on("load", () => {
         instance.fitBounds(
@@ -136,9 +245,33 @@ export function ComparisonViewer({ manifest, pairId, pol, view: controlledView, 
           { padding: 24, duration: 0 },
         );
       });
+      // Permanent handler: the style JSON is ready for addSource/addLayer as
+      // soon as `style.load` fires, so re-mount the product rasters on the
+      // first style load and after every later setStyle() (which clears them).
+      instance.on("style.load", () => {
+        if (instance === first) styleReady.current.before = true;
+        else styleReady.current.after = true;
+        mountedUrls.current.clear();
+        syncOverlaysRef.current();
+      });
       instance.on("error", (event) => {
         const message = (event as { error?: Error }).error?.message;
-        if (message) setMapError(message);
+        if (!message) return;
+        // A basemap style that cannot load would leave the plate blank forever:
+        // fall back to a plain dark canvas so the product rasters stay visible.
+        // Only before the style is ready, and never on a tile 404 — a missing
+        // raster tile must not discard a working basemap.
+        const ready = instance === first ? styleReady.current.before : styleReady.current.after;
+        if (!ready && !fallbackUsed.current && /style|token|401|403|unauthori[sz]ed|forbidden/i.test(message)) {
+          fallbackUsed.current = true;
+          try {
+            instance.setStyle(FALLBACK_STYLE(true));
+            return;
+          } catch {
+            /* fall through to the visible error */
+          }
+        }
+        setMapError(message);
       });
     }
 
@@ -157,6 +290,8 @@ export function ComparisonViewer({ manifest, pairId, pol, view: controlledView, 
     const instances = [beforeMap.current, afterMap.current];
     if (instances.some((instance) => !instance) || mountedView.current === view) return;
     mountedView.current = view;
+    // setStyle drops runtime sources/layers; the style.load handler re-adds them.
+    styleReady.current = { before: false, after: false };
     const style = mapStyleForView(view);
     for (const instance of instances) {
       if (!instance) continue;
@@ -168,66 +303,12 @@ export function ComparisonViewer({ manifest, pairId, pol, view: controlledView, 
     }
   }, [view]);
 
-  // Keep the two raster sources pointing at the exact layers for the selection.
+  // Mount / re-point the before, after and change-overlay rasters whenever the
+  // selection, the view or the palette changes. The maps' own `style.load`
+  // handler re-runs this after every style swap, so no work is lost here.
   useEffect(() => {
-    const cleanups: Array<() => void> = [];
-    const sources: Array<[mapboxgl.Map | null, string, string | undefined, string]> = [
-      [beforeMap.current, "comparison-before", beforeLayerId, "before"],
-      [afterMap.current, "comparison-after", afterLayerId, "after"],
-    ];
-    for (const [instance, sourceId, layerId, side] of sources) {
-      if (!instance || !layerId) continue;
-      const layer = manifest.layers.find((item) => item.id === layerId);
-      if (!layer) continue;
-      const tiles = [resolveTileUrl(layer.tile_url_template, api.baseUrl)];
-      let cancelled = false;
-      const apply = () => {
-        if (cancelled || !instance.isStyleLoaded()) return;
-        const existing = instance.getSource(sourceId) as mapboxgl.RasterTileSource | undefined;
-        if (existing) {
-          existing.setTiles(tiles);
-          setObservationPalette(instance, `comparison-${side}-raster`, colorRef.current);
-          return;
-        }
-        instance.addSource(sourceId, {
-          type: "raster",
-          tiles,
-          tileSize: 256,
-          minzoom: layer.min_zoom,
-          maxzoom: layer.max_zoom,
-        });
-        instance.addLayer({
-          id: `comparison-${side}-raster`,
-          type: "raster",
-          source: sourceId,
-          paint: { "raster-opacity": 0.92 },
-        });
-        setObservationPalette(instance, `comparison-${side}-raster`, colorRef.current);
-      };
-      if (instance.isStyleLoaded()) apply();
-      else instance.once("style.load", apply);
-      cleanups.push(() => {
-        cancelled = true;
-        instance.off("style.load", apply);
-      });
-    }
-    return () => { cleanups.forEach((cleanup) => cleanup()); };
-  }, [beforeLayerId, afterLayerId, manifest.layers, view]);
-
-  useEffect(() => {
-    const cleanups: Array<() => void> = [];
-    for (const [instance, id] of [[beforeMap.current, "comparison-before-raster"], [afterMap.current, "comparison-after-raster"]] as const) {
-      if (!instance) continue;
-      const apply = () => {
-        if (!instance.isStyleLoaded()) return;
-        instance.off("idle", apply);
-        setObservationPalette(instance, id, falseColor);
-      };
-      if (instance.isStyleLoaded()) apply(); else instance.on("idle", apply);
-      cleanups.push(() => { instance.off("idle", apply); });
-    }
-    return () => { cleanups.forEach((cleanup) => cleanup()); };
-  }, [falseColor, beforeLayerId, afterLayerId, view]);
+    syncOverlaysRef.current();
+  }, [beforeLayerId, afterLayerId, overlayLayerIds, manifest.layers, view, falseColor]);
 
   if (!result.ok) {
     return (
@@ -424,7 +505,6 @@ export function ComparisonViewer({ manifest, pairId, pol, view: controlledView, 
               What this does not show
             </span>
           </h2>
-          <p className="mt-2">{active.caveat}</p>
           <p className="mt-2">
             Two dates show a measured difference in radar brightness. They do not by themselves identify the
             cause or extent of an event.

@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Map, type MapView } from "@/components/Map";
 import { ComparisonViewer } from "@/components/ComparisonViewer";
+import { LayerPicker, overlayCandidates } from "@/components/LayerPicker";
 import { findObservation, normalizeDate, observationDates, observationPolarizations, pairDates, usablePairs } from "@/lib/comparison";
 import type { SiteManifest } from "@/lib/types";
 
@@ -26,6 +27,8 @@ export function CalendarReview({ manifest }: { manifest: SiteManifest }) {
   const [comparisonMode, setComparisonMode] = useState<"curated" | "calendar">(pairs.length ? "curated" : "calendar");
   const [pairId, setPairId] = useState(pairs[0]?.id ?? "");
   const [falseColor, setFalseColor] = useState(false);
+  // Measured change layers the user added over the observation or the pair.
+  const [overlayIds, setOverlayIds] = useState<string[]>([]);
   const [view, setView] = useState<MapView>("sar");
   useEffect(() => {
     const readHash = () => { if (window.location.hash === "#compare") setMode("compare"); };
@@ -33,6 +36,11 @@ export function CalendarReview({ manifest }: { manifest: SiteManifest }) {
     return () => window.removeEventListener("hashchange", readHash);
   }, []);
   useEffect(() => { setPol(pols[0] ?? ""); }, [pols]);
+  // A polarization switch drops added layers that do not exist for it.
+  useEffect(() => {
+    const available = new Set(overlayCandidates(manifest, pol).map((layer) => layer.id));
+    setOverlayIds((current) => current.filter((id) => available.has(id)));
+  }, [manifest, pol]);
   useEffect(() => {
     setStart(dates[0] ?? ""); setEnd(dates[dates.length - 1] ?? "");
     setIndex(0); setPlaying(false);
@@ -52,6 +60,11 @@ export function CalendarReview({ manifest }: { manifest: SiteManifest }) {
     const timer = window.setTimeout(() => setIndex((i) => (i + 1) % frames.length), 1200);
     return () => window.clearTimeout(timer);
   }, [playing, frames.length, displayedId, current?.id]);
+  // Added change products render above the observations in the playback map.
+  const playbackLayers = useMemo(
+    () => [...manifest.layers.filter((layer) => overlayIds.includes(layer.id)), ...allFrames],
+    [manifest.layers, overlayIds, allFrames],
+  );
   const compareManifest = useMemo((): SiteManifest => ({ ...manifest, pairs: [{ id: "calendar-selection", pre: start.replace(/-/g, ""), post: end.replace(/-/g, ""), label: "Selected calendar dates", stats: {} }] }), [manifest, start, end]);
   const calendarError = !dates.length ? "No backscatter observation dates are available for this polarization." : !dates.includes(start) || !dates.includes(end) ? "Choose exact installed dates. No substitute date or polarization is used." : start > end ? "The before date must be on or before the after date." : null;
   return <section className="space-y-4" aria-label="Timeline and comparison workspace">
@@ -68,9 +81,10 @@ export function CalendarReview({ manifest }: { manifest: SiteManifest }) {
       <p className="footnote">These dates set the playback range or calendar comparison; a curated comparison uses the pair selected below.</p>
       <p className="footnote">Available {pol} dates: {dates.join(" · ") || "none"}. Playback includes only installed observations; no dates are interpolated.</p>
     </div>
+    <LayerPicker id="time-machine-layers" manifest={manifest} pol={pol} value={overlayIds} onChange={setOverlayIds} />
     {calendarError && (mode === "playback" || comparisonMode === "calendar") && <p className="tm-problem" role="status">{calendarError}</p>}
     {mode === "playback" && valid && current && <>
-      <div className="h-[32rem] overflow-hidden rounded-lg"><Map bbox={manifest.site.bbox} layers={allFrames} activeLayerId={current.id} onActiveLayerChange={setDisplayedId} view={view} setView={setView} falseColor={falseColor} onFalseColorChange={setFalseColor} /></div>
+      <div className="h-[32rem] overflow-hidden rounded-lg"><Map bbox={manifest.site.bbox} layers={playbackLayers} activeLayerId={current.id} overlayLayerIds={overlayIds} onActiveLayerChange={setDisplayedId} view={view} setView={setView} falseColor={falseColor} onFalseColorChange={setFalseColor} /></div>
       <div className="tm-panel"><div className="flex flex-wrap items-center gap-3">
         <button type="button" className="tm-button tm-button--primary" disabled={frames.length < 2} onClick={() => setPlaying((p) => !p)} aria-label={playing ? "Pause playback" : "Play playback"}>{playing ? "❚❚ Pause" : "▶ Play"}</button>
         <span>{displayedIndex >= 0 ? `Frame ${displayedIndex + 1} / ${frames.length}` : "Showing previous frame"} · {displayed?.date} · {pol}</span>
@@ -85,11 +99,11 @@ export function CalendarReview({ manifest }: { manifest: SiteManifest }) {
         <label className="tm-calendar__label">Mode<select value={comparisonMode} onChange={(e) => setComparisonMode(e.target.value as "curated" | "calendar")}><option value="curated" disabled={!pairs.length}>Curated pair</option><option value="calendar">Calendar dates</option></select></label>
         {comparisonMode === "curated" && <label className="tm-calendar__label">Installed pair<select value={pairId} onChange={(e) => setPairId(e.target.value)}>{pairs.map((pair) => <option key={pair.id} value={pair.id}>{pairDates(pair).pre} → {pairDates(pair).post}</option>)}</select></label>}
       </div>
-      {comparisonMode === "curated" && pairId ? <ComparisonViewer key={`${manifest.site.id}-${pairId}-${pol}`} manifest={manifest} pairId={pairId} pol={pol} view={view} setView={setView} falseColor={falseColor} onFalseColorChange={setFalseColor} /> : comparisonMode === "calendar" && <>
+      {comparisonMode === "curated" && pairId ? <ComparisonViewer key={`${manifest.site.id}-${pairId}-${pol}`} manifest={manifest} pairId={pairId} pol={pol} view={view} setView={setView} falseColor={falseColor} onFalseColorChange={setFalseColor} overlayLayerIds={overlayIds} /> : comparisonMode === "calendar" && <>
         <p className="footnote">Calendar mode compares the exact observations selected by date. Curated pair mode uses an installed pair’s exact acquisitions.</p>
-        {valid && (start < end ? <ComparisonViewer key={`${start}-${end}-${pol}`} manifest={compareManifest} pairId="calendar-selection" pol={pol} view={view} setView={setView} falseColor={falseColor} onFalseColorChange={setFalseColor} /> : <p className="tm-problem">Choose two different exact dates for comparison.</p>)}
+        {valid && (start < end ? <ComparisonViewer key={`${start}-${end}-${pol}`} manifest={compareManifest} pairId="calendar-selection" pol={pol} view={view} setView={setView} falseColor={falseColor} onFalseColorChange={setFalseColor} overlayLayerIds={overlayIds} /> : <p className="tm-problem">Choose two different exact dates for comparison.</p>)}
       </>}
     </>}
-    <details className="tm-panel"><summary className="cursor-pointer text-sm">Exact acquisitions and provenance</summary><div className="mt-3 overflow-x-auto"><table className="w-full min-w-[680px] text-left text-xs"><thead><tr><th>Date</th><th>Polarization</th><th>Product</th><th>CRID</th><th>Maturity</th><th>Source</th><th>Granule</th></tr></thead><tbody>{frames.map((layer) => { const acquisition = manifest.acquisitions.find((item) => normalizeDate(item.date.slice(0, 10)) === normalizeDate(layer.date)); return <tr key={layer.id} className="border-t border-slate-700"><td className="p-2">{layer.date}</td><td>{layer.pol}</td><td>{layer.kind}</td><td>{acquisition?.crid ?? manifest.source.crid}</td><td>{manifest.source.maturity}</td><td>{manifest.source.mission} · {manifest.source.product}</td><td className="font-mono">{acquisition?.granule ?? "Not listed in manifest"}</td></tr>; })}</tbody></table><p className="mt-3 text-xs">{manifest.site.caveat}</p></div></details>
+    <details className="tm-panel"><summary className="cursor-pointer text-sm">Exact acquisitions and provenance</summary><div className="mt-3 overflow-x-auto"><table className="w-full min-w-[680px] text-left text-xs"><thead><tr><th>Date</th><th>Polarization</th><th>Product</th><th>CRID</th><th>Maturity</th><th>Source</th><th>Granule</th></tr></thead><tbody>{frames.map((layer) => { const acquisition = manifest.acquisitions.find((item) => normalizeDate(item.date.slice(0, 10)) === normalizeDate(layer.date)); return <tr key={layer.id} className="border-t border-slate-700"><td className="p-2">{layer.date}</td><td>{layer.pol}</td><td>{layer.kind}</td><td>{acquisition?.crid ?? manifest.source.crid}</td><td>{manifest.source.maturity}</td><td>{manifest.source.mission} · {manifest.source.product}</td><td className="font-mono">{acquisition?.granule ?? "Not listed in manifest"}</td></tr>; })}</tbody></table></div></details>
   </section>;
 }

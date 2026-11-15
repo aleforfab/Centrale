@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import type { SiteSummary } from "@/lib/types";
+import { visibleSites, type SiteSummary } from "@/lib/types";
 
 interface SiteSelectorProps {
   id: string;
@@ -12,7 +12,9 @@ interface SiteSelectorProps {
 }
 
 /** Shared site picker used by the dashboard and the timeline/comparison workspace. */
-export function SiteSelector({ id, sites, value, disabled = false, onChange }: SiteSelectorProps) {
+export function SiteSelector({ id, sites: allSites, value, disabled = false, onChange }: SiteSelectorProps) {
+  // Synthetic rehearsal fixtures are never offered as a site choice.
+  const sites = visibleSites(allSites);
   return (
     <div className="field min-w-[11rem]">
       <label htmlFor={id}>Site</label>

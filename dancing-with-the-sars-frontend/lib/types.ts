@@ -8,6 +8,13 @@ export interface SiteSummary {
   date_range: string[];
   acquisition_count: number;
   pairs: Pair[];
+  /** True for synthetic rehearsal fixtures (not real observations). */
+  synthetic?: boolean;
+}
+
+/** Sites offered in selectors: synthetic rehearsal fixtures are hidden. */
+export function visibleSites(sites: SiteSummary[]): SiteSummary[] {
+  return sites.filter((site) => !site.synthetic);
 }
 
 export interface SourceInfo {

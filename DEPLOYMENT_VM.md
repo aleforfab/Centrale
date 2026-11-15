@@ -167,7 +167,11 @@ PRODUCTS_DIR=/srv/dancing-sars/products \
 python -m nisar.cli verify --site demo-fixture
 ```
 
-This is a software rehearsal, not evidence of a real change.
+This is a software rehearsal, not evidence of a real change. The built
+`demo-fixture` site stays on disk and `/api/sites` still reports it (with
+`synthetic: true`) so `verify` keeps working, but the frontend hides synthetic
+fixtures from every site selector — the dashboard, the time machine and the
+before/after workspace only offer real sites.
 
 ## Step 5 — Frontend install and build
 

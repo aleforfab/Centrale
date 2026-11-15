@@ -8,8 +8,13 @@ vi.mock("@/components/Map", () => ({ mapStyleForView: (view: string) => view ===
 vi.mock("mapbox-gl", () => {
   class MockMap {
     sources: Record<string, any> = {}; layers: Record<string, any> = {};
+    handlers: Record<string, Function[]> = {};
     setPaintProperty = vi.fn();
-    on() {} off() {} once() {} remove() {} isStyleLoaded() { return true; }
+    on(event: string, cb: Function) { (this.handlers[event] ??= []).push(cb); }
+    off(event: string, cb: Function) { this.handlers[event] = (this.handlers[event] ?? []).filter((item) => item !== cb); }
+    once() {}
+    emit(event: string) { this.handlers[event]?.forEach((cb) => cb()); }
+    remove() {} isStyleLoaded() { return true; }
     getSource(id: string) { return this.sources[id]; }
     getLayer(id: string) { return this.layers[id]; }
     addSource(id: string, source: any) { this.sources[id] = { ...source, setTiles: vi.fn() }; }
@@ -34,6 +39,8 @@ afterEach(cleanup);
 it("applies the same display palette to both comparison observations", () => {
   state.maps.length = 0;
   render(<ComparisonViewer manifest={manifest} pairId="pair" pol="HH" />);
+  // The raster mounts on the style's own load event, not on a loaded-style gate.
+  for (const map of state.maps) map.emit("style.load");
   fireEvent.click(screen.getByRole("button", { name: "False colour: off" }));
   expect(state.maps[0].setPaintProperty).toHaveBeenCalledWith("comparison-before-raster", "raster-color", expect.any(Array));
   expect(state.maps[1].setPaintProperty).toHaveBeenCalledWith("comparison-after-raster", "raster-color", expect.any(Array));

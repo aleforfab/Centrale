@@ -24,6 +24,11 @@ interface MapProps {
    * other mounted product layers are hidden via opacity — no source/layer removal or re-add while this prop changes.
    */
   activeLayerId?: string;
+  /**
+   * Extra product layers that stay visible regardless of the playback cursor:
+   * change masks and difference products the user added over the observation.
+   */
+  overlayLayerIds?: string[];
   /** Display palette affects only grayscale observations, never masks or differences. */
   falseColor?: boolean;
   onFalseColorChange?: (enabled: boolean) => void;
@@ -121,7 +126,7 @@ function syncSiteFootprint(map: mapboxgl.Map, bbox: number[]) {
  * Runs on layer-set changes and after style reloads only — never per playback
  * tick. Existing layers get their opacity/visibility refreshed in place.
  */
-function syncProductLayers(map: mapboxgl.Map, layers: ProductLayer[], activeLayerId: string | undefined, falseColor: boolean, urls: Map<string, string>) {
+function syncProductLayers(map: mapboxgl.Map, layers: ProductLayer[], activeLayerId: string | undefined, overlayIds: Set<string>, falseColor: boolean, urls: Map<string, string>) {
   const wantedLayerIds = new Set(layers.map((layer) => `${PRODUCT_LAYER_PREFIX}${layer.id}`));
   const wantedSourceIds = new Set(layers.map((layer) => `${PRODUCT_SOURCE_PREFIX}${layer.id}`));
   for (const existing of map.getStyle().layers ?? []) {
@@ -142,7 +147,7 @@ function syncProductLayers(map: mapboxgl.Map, layers: ProductLayer[], activeLaye
     const tileUrl = resolveTileUrl(layer.tile_url_template, api.baseUrl);
     const opacity = layer.kind === "difference" ? RASTER_OPACITY_DIFFERENCE : RASTER_OPACITY_OBSERVATION;
     // Keep every playback source in use so Mapbox preloads its tiles.
-    const layerOpacity = activeLayerId == null || layer.id === activeLayerId ? opacity : 0;
+    const layerOpacity = activeLayerId == null || layer.id === activeLayerId || overlayIds.has(layer.id) ? opacity : 0;
 
     const source = map.getSource(sourceId) as mapboxgl.RasterTileSource | undefined;
     if (source) {
@@ -183,7 +188,7 @@ function syncProductLayers(map: mapboxgl.Map, layers: ProductLayer[], activeLaye
   }
 }
 
-export const Map: React.FC<MapProps> = ({ bbox, layers, activeLayerId, view, setView, falseColor: controlledColor, onFalseColorChange, onActiveLayerChange }) => {
+export const Map: React.FC<MapProps> = ({ bbox, layers, activeLayerId, overlayLayerIds, view, setView, falseColor: controlledColor, onFalseColorChange, onActiveLayerChange }) => {
   const [localColor, setLocalColor] = useState(false);
   const [shownId, setShownId] = useState(activeLayerId);
   const falseColor = controlledColor ?? localColor;
@@ -200,6 +205,8 @@ export const Map: React.FC<MapProps> = ({ bbox, layers, activeLayerId, view, set
   currentOnActiveLayerChange.current = onActiveLayerChange;
   const currentLayers = useRef(layers);
   currentLayers.current = layers;
+  const currentOverlayIds = useRef<Set<string>>(new Set(overlayLayerIds));
+  currentOverlayIds.current = new Set(overlayLayerIds);
   const currentBbox = useRef(bbox);
   currentBbox.current = bbox;
   const currentActiveLayerId = useRef(activeLayerId);
@@ -225,7 +232,7 @@ export const Map: React.FC<MapProps> = ({ bbox, layers, activeLayerId, view, set
       if (!map.current) return;
       mountedUrls.current.clear();
       displayedLayerId.current = currentActiveLayerId.current;
-      syncProductLayers(map.current, currentLayers.current, displayedLayerId.current, currentColor.current, mountedUrls.current);
+      syncProductLayers(map.current, currentLayers.current, displayedLayerId.current, currentOverlayIds.current, currentColor.current, mountedUrls.current);
       setShownId(displayedLayerId.current);
       if (displayedLayerId.current) currentOnActiveLayerChange.current?.(displayedLayerId.current);
       syncSiteFootprint(map.current, currentBbox.current);
@@ -277,13 +284,13 @@ export const Map: React.FC<MapProps> = ({ bbox, layers, activeLayerId, view, set
       if (!currentMap.isStyleLoaded()) return;
       currentMap.off("idle", reconcile);
       if (currentActiveLayerId.current && !layers.some((item) => item.id === displayedLayerId.current)) displayedLayerId.current = currentActiveLayerId.current;
-      syncProductLayers(currentMap, layers, currentActiveLayerId.current ? displayedLayerId.current : undefined, currentColor.current, mountedUrls.current);
+      syncProductLayers(currentMap, layers, currentActiveLayerId.current ? displayedLayerId.current : undefined, new Set(overlayLayerIds), currentColor.current, mountedUrls.current);
       if (currentActiveLayerId.current && displayedLayerId.current) { setShownId(displayedLayerId.current); currentOnActiveLayerChange.current?.(displayedLayerId.current); }
     };
     if (currentMap.isStyleLoaded()) reconcile();
     else currentMap.on("idle", reconcile);
     return () => { currentMap.off("idle", reconcile); };
-  }, [layers]);
+  }, [layers, overlayLayerIds]);
 
   // Keep the previous frame on screen until the requested source has loaded.
   // All sources remain visible at zero opacity, so Mapbox can preload them.
@@ -297,7 +304,8 @@ export const Map: React.FC<MapProps> = ({ bbox, layers, activeLayerId, view, set
       currentMap.off("idle", applyWhenReady);
       for (const layer of currentLayers.current) {
         const id = `${PRODUCT_LAYER_PREFIX}${layer.id}`;
-        if (currentMap.getLayer(id)) currentMap.setPaintProperty(id, "raster-opacity", layer.id === activeLayerId ? (layer.kind === "difference" ? RASTER_OPACITY_DIFFERENCE : RASTER_OPACITY_OBSERVATION) : 0);
+        const visible = layer.id === activeLayerId || currentOverlayIds.current.has(layer.id);
+        if (currentMap.getLayer(id)) currentMap.setPaintProperty(id, "raster-opacity", visible ? (layer.kind === "difference" ? RASTER_OPACITY_DIFFERENCE : RASTER_OPACITY_OBSERVATION) : 0);
       }
       displayedLayerId.current = activeLayerId;
       setShownId(activeLayerId);
