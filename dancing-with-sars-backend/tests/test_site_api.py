@@ -168,3 +168,49 @@ def test_nisar_search_service_failure_is_503(monkeypatch, tmp_path):
             },
         )
     assert response.status_code == 503
+
+
+def test_cors_allows_only_explicit_methods(tmp_path, monkeypatch):
+    monkeypatch.setattr(Config, "PRODUCTS_DIR", tmp_path)
+    with TestClient(main.app) as client:
+        allowed = client.options(
+            "/health",
+            headers={
+                "Origin": "http://localhost:3000",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+        assert allowed.status_code == 200
+        assert allowed.headers["access-control-allow-methods"] == "GET, POST, OPTIONS"
+
+        rejected = client.options(
+            "/health",
+            headers={
+                "Origin": "http://localhost:3000",
+                "Access-Control-Request-Method": "DELETE",
+            },
+        )
+        assert rejected.status_code == 400
+
+
+def test_main_imports_ee_lazily_and_config_has_no_data_gap_constants():
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    assert not hasattr(Config, "DATA_GAP_START")
+    assert not hasattr(Config, "DATA_GAP_END")
+
+    backend_dir = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys, main; assert 'ee' not in sys.modules; assert 'services.gee_service' not in sys.modules",
+        ],
+        cwd=backend_dir,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
