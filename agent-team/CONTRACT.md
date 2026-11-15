@@ -98,3 +98,31 @@ Merge in order; run the full matrix (backend ruff/pytest, frontend ci/typecheck/
 test/build, CLI verify on synthetic demo, browser-level check on local servers);
 keep `HACKATHON.md` phase status current; open the single integration draft PR
 with `CONTRIBUTING.md` sections; never merge it unless the user explicitly asks.
+
+## Round 2 (2026-11-14) — base `origin/main` @ `94e12f0`
+
+Supervisor branch: `arena/da6e366a-centrale`. All round-2 workers branch from
+`origin/main` @ `94e12f0` after the round-2 setup PR merges (or, meanwhile,
+from `origin/arena/da6e366a-centrale` read-only for the briefs). The
+Sentinel-1 C-band pivot was considered and **dropped** by the maintainer —
+the product stays NISAR L-band GCOV. See `skills/dancing-with-the-sars/SKILL.md`.
+
+| Slice | Owns | Must NOT touch |
+| --- | --- | --- |
+| 04 map-playback-readability | `dancing-with-the-sars-frontend/components/Map.tsx`, `components/WorldviewReview.tsx`, `lib/scanFrames.ts`, `tests/scan-frames.test.ts` | `app/**`, `components/LiveScanPanel.tsx` (new, worker 05), `components/ComparisonViewer.tsx`, `next.config.mjs`, backend, package-lock |
+| 05 pages-scan-controls | `dancing-with-the-sars-frontend/app/page.tsx`, `app/compare/page.tsx`, `app/time-machine/page.tsx`, **new** `components/LiveScanPanel.tsx`, `components/ComparisonViewer.tsx` (only if the availability readout needs it — ANNOUNCE), `components/SiteNav.tsx` (only with ANNOUNCE) | `Map.tsx`, `WorldviewReview.tsx`, `lib/scanFrames.ts`, `lib/tileUrl.ts`, backend, package-lock, `next.config.mjs` |
+| 06 hygiene-fixture-delta | deletes in H1 list only; `dancing-with-sars-backend/nisar/config.py`, `main.py`, `scripts/make_demo_site.py`, `tests/fixtures/make_fake_gcov.py` (compat only), new `docs/DEMO_FIXTURE_DELTA.md`; `npm audit` report | `Map.tsx`, `WorldviewReview.tsx`, `app/**`, `live_fetch.py`, `jobs.py`, `routers/`, InSAR package; VM access of any kind |
+
+Honesty invariants (§2), verification gates (§3) and report format (§4) are unchanged.
+
+Round-2 merge order (supervisor decides): **06 → 04 → 05**. CI green per merge.
+Workers report against `94e12f0`; all three re-run the full frontend/backend
+matrix on their merged base in the final integration pass.
+
+Worker CANNOT decide (unchanged, plus):
+
+- Anything VM-side: rebuild, demo-fixture regeneration with the delta origin,
+  `NEXT_PUBLIC_API_URL` removal, live-fetch operator guard design (A3).
+- The havu.cc-inspired visual redesign (Track C) — needs the maintainer's
+  explicit decisions (accent, paper-light, `/method` page, scope).
+- Gate 2 (real Anak Krakatau build) — still awaits explicit go-ahead.
