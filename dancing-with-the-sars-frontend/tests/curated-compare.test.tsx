@@ -15,20 +15,20 @@ const manifest: SiteManifest = {
 vi.mock("@/lib/api", () => ({ api: { sites: vi.fn(async () => [{ id: "anak-krakatau", title: "Anak Krakatau" }]), site: vi.fn(async () => manifest), baseUrl: "" } }));
 vi.mock("@/components/LiveScanPanel", () => ({ LiveScanPanel: () => null, BuiltProductsBanner: () => null }));
 vi.mock("@/components/Map", () => ({ Map: () => <div>Timeline map</div> }));
-vi.mock("@/components/ComparisonViewer", () => ({ ComparisonViewer: ({ pairId, showProducts, manifest: m }: { pairId: string; showProducts?: boolean; manifest: SiteManifest }) => <div data-testid="viewer">{pairId} · {showProducts ? m.layers.find((l) => l.pair_id === pairId && l.kind === "difference")?.id : "observations only"}</div> }));
+vi.mock("@/components/ComparisonViewer", () => ({ ComparisonViewer: ({ pairId, view }: { pairId: string; view: string }) => <div data-testid="viewer">{pairId} · {view}</div> }));
 import { CalendarReview } from "@/components/CalendarReview";
 
 afterEach(cleanup);
 describe("comparison modes", () => {
-  it("uses installed pair products and never assigns an arbitrary calendar pair a product", async () => {
+  it("tracks exact curated or calendar dates without adding a change-product panel", async () => {
     render(<CalendarReview manifest={manifest} />);
     fireEvent.click(screen.getByRole("button", { name: "Before / after" }));
     expect((await screen.findByTestId("viewer")).textContent).toContain("pair-1");
-    expect(screen.getByTestId("viewer").textContent).toContain("diff-1");
+    expect(screen.getByTestId("viewer").textContent).toContain("sar");
     fireEvent.change(screen.getByLabelText("Installed pair"), { target: { value: "pair-2" } });
-    expect(screen.getByTestId("viewer").textContent).toContain("diff-2");
+    expect(screen.getByTestId("viewer").textContent).toContain("pair-2 · sar");
     fireEvent.change(screen.getByLabelText("Mode"), { target: { value: "calendar" } });
-    await waitFor(() => expect(screen.getByTestId("viewer").textContent).toContain("calendar-selection · observations only"));
-    expect(screen.getByText(/Only installed pairs have measured difference products/)).toBeTruthy();
+    await waitFor(() => expect(screen.getByTestId("viewer").textContent).toContain("calendar-selection · sar"));
+    expect(screen.getByText(/Calendar mode compares the exact observations/)).toBeTruthy();
   });
 });

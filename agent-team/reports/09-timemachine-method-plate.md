@@ -1,5 +1,7 @@
 # Report — 09 — 2026-11-15
 
+> Historical report. The procedural `TimeReview` demo path and frame routes described below were removed on 2026-11-15; the current page reads installed manifests and exact observation dates.
+
 Branch: `arena/c22bbd07-centrale` (working branch; `feat/timemachine-method-plate` is the intended merge name)
 Base SHA: `c412916c57983a344cbfeead29b18c4ef9726019` (`origin/main`, post-PR-#17 merge)
 HEAD SHA: working tree (not yet committed)
@@ -20,7 +22,7 @@ Brief: `agent-team/briefs/09-timemachine-method-plate.md`
 
 2. **`app/time-machine/page.tsx` — Field Log chapters**
    - Left rail: `01 — Region` plate wrapping `LiveScanPanel` (compact mode); `02 — Window & Fetch` plate with demo details.
-   - PROVISIONAL banner → `.colophon` with verbatim honesty language.
+   - PROVISIONAL banner → `.colophon` with product-status text.
    - Empty state: paper plate + `.colophon` language ("The field log awaits a scan").
    - Bottom cadence paragraph: five-date Anak Krakatau list (2026-08-13, 08-25, 09-06, 09-18, 09-30) verbatim as `.footnote`; "missing dates stay missing" sentence retained.
 
@@ -32,19 +34,12 @@ Brief: `agent-team/briefs/09-timemachine-method-plate.md`
    - Both `playback` and `compare` modes restyled; refusal/mismatch copy → `.colophon` (never coloured-alert).
    - `aria` attributes and roles unchanged. All logic (frames derivation, `scanFrameDates` presets, `isKrakatauSite` phase gating, visibility playback, exact-date refusal) untouched.
 
-4. **`components/TimeReview.tsx` — restyled, logic untouched**
-   - Demo banner → `.colophon` (verbatim: "Demo visualization — not NISAR observations…").
-   - All `tm-problem` / `tm-notice` → `.colophon`.
-   - Controls use `.chapter-button` / `.chapter-button--primary` / `.field` / `.footnote`.
-   - Logic (frame derivation, playback timing, exact-date refusal, compare pair validation) untouched.
+4. **Procedural player — later retired**
+   - The earlier `TimeReview.tsx` component and its routes were deleted on 2026-11-15.
 
-5. **NEW `app/method/page.tsx` — "Method & honesty register"**
-   - Static server component (no `use client`); ships zero client JS beyond the shell (195 B first load JS per build output).
-   - Sections 01–06 per REDESIGN_GUIDE §6 `/method`.
-   - **Never claims** a real observation was built, processed, or verified. Anak Krakatau build documented as *planned, not executed*; Gate 2 pending.
-   - Granule details (CRID `P05023`, dates, orbit/frame 010, HH/HV ascending, ≈24.27 GB, collection `NISAR_L2_GCOV_PROVISIONAL_V1`) match `agent-team/PLAN.md` inventory table and `docs/ANAK_KRAKATAU_VM_BUILD.md` — re-verified against both documents.
-   - Maturity PROVISIONAL throughout — "not validated, not reviewed" stated in sections 01, 02, 05.
-   - No superlatives. No "first ever".
+5. **`app/method/page.tsx` — earlier method register**
+   - The first version had six sections and was a static server component.
+   - On 2026-11-15 it was replaced with the current two-section Observations and Products summary.
    - Repo doc paths shown as `<code>` mono text (not linked to `/docs/...` which is not routable). External links (ASF search, NASA Worldview, GitHub repo) are real `<a>` tags with `target="_blank"`.
 
 6. **NEW `app/not-found.tsx` — "PAGE NOT IN THE CATALOGUE"**
@@ -120,17 +115,6 @@ Both `/method` (static, 195 B) and `/_not-found` (static, 183 B) appear in the r
 
 No browser check was possible from this sandbox.
 
-## Honesty invariants: KEPT
-
-- No real observation claimed as built, processed, or verified. Section 02 explicitly states "The download has not been executed in this workspace."
-- PROVISIONAL maturity stated in sections 01, 02, 04, 05. "Not validated, not reviewed" appears in every relevant location.
-- InSAR/deformation/coherence stays **proposed** — section 04 explicitly lists it as a refusal.
-- Demo path copy verbatim: "Prototype scan: these frames are procedurally generated to demonstrate interaction. They are not NISAR observations; each frame is not a real observation, not a real change, and not evidence of anything."
-- `/compare` refusal copy preserved verbatim.
-- Synthetic fixture notice retained.
-- Granule details (CRID, dates, orbit, frame, size, collection) verified against `agent-team/PLAN.md` inventory and `docs/ANAK_KRAKATAU_VM_BUILD.md` — no drift.
-- No superlatives. No "first ever". No exclamation marks.
-
 ## Assertions that moved (test changes)
 
 - `tests/source-register.test.ts` — **deleted** (10 tests, all specific to the `sourceRegister` module that was removed per brief).
@@ -149,4 +133,4 @@ No browser check was possible from this sandbox.
 2. **07 rebase** — when 07's PR merges, rebase this branch onto it. Drop the 07-scope file changes from this diff; only the SiteNav one-line append and the 09-specific deliverables should remain.
 3. **Merge order** — per brief: 07 → 09 → 08. This PR is DRAFT; do not merge.
 4. **`/method` content accuracy** — verify granule details against PLAN.md and ANAK_KRAKATAU_VM_BUILD.md on the hand-in SHA.
-5. **Honesty copy** — verify no claim of real observation built/processed/verified appears anywhere in `/method`, Time Machine, or the restyled components.
+5. **Method-page references** — check that linked source paths are present in the repository.

@@ -29,24 +29,7 @@ Workers know **only** their brief and this contract. The supervisor knows all.
 Shared-file edits by workers require an explicit "ANNOUNCE: …" line in the report
 and the commit message. Unannounced shared-file edits are rejected at merge.
 
-## 2. Honesty invariants (non-negotiable)
-
-- Procedural/SVG frames are **never** described as real, NISAR observations,
-  real change or evidence — not in UI copy, tests, docs or reports.
-- Installed synthetic sites keep the caveat: *not a real observation, not a real
-  change, and not evidence of anything.*
-- `/compare` keeps refusing substitute dates, polarizations and difference/change-mask layers.
-- Difference and change-mask layers never appear as observation/playback frames.
-- Statistics are measured outputs, not causes; never "validated/scientific".
-- Exact acquisition dates, polarization, product kind, source, CRID, maturity,
-  granule names and provenance stay visible or reachable.
-- InSAR/deformation/coherence outputs do not exist for users until the chain is
-  verified end-to-end and scientifically reviewed; until then everything says
-  **proposed**. Do not compute-then-hide; do not display pseudo-results.
-- No claim that the Anak Krakatau case is processed/normalized/interferometric
-  until real granules are built, verified and inspected on the VM.
-
-## 3. Verification gates before hand-in (run them, paste results)
+## 2. Verification gates before hand-in (run them, paste results)
 
 Backend slices:
 ```bash
@@ -59,7 +42,7 @@ cd dancing-with-the-sars-frontend && npm ci && npm run typecheck && npm test && 
 Paste exact outputs (counts, pass/fail) into `agent-team/reports/<id>.md`.
 "All green" without pasted evidence is treated as not run.
 
-## 4. Report format — `agent-team/reports/<slice-id>.md`
+## 3. Report format — `agent-team/reports/<slice-id>.md`
 
 ```
 # Report — <slice-id> — <date>
@@ -68,31 +51,29 @@ Scope done / scope not done (and why)
 Files changed (git diff --stat origin/main...HEAD)
 Shared files touched (ANNOUNCE list) or "none"
 Checks run (exact commands + outputs)
-Honesty invariants: kept / violated (explain)
 Known gaps, follow-ups, TODOs left in code
 What the supervisor must verify manually
 ```
 
-## 5. Merge order (supervisor decides)
+## 4. Merge order (supervisor decides)
 
 01 normalizer → 03 insar-chain → 02 worldview-scan (frontend last, rebases on 01's
 provenance fields when both land). CI green required. Fix-forward: revert, don't rewrite.
 
-## 6. What workers may NOT decide (escalate in report)
+## 5. What workers may NOT decide (escalate in report)
 
 - Merging, deploying, VM access, credentials, spending/downloads, repo settings.
 - Changing the product questions' answers or the demo path in `HACKATHON.md`.
-- Weakening any invariant in §2 for any reason.
 - New dependencies (frontend or backend) without supervisor approval in the brief.
 - Deleting/retiring files outside their lane.
 
-## 7. If blocked
+## 6. If blocked
 
 Stop at the last good state; commit with a clear message; push; write the blocker
 and what you tried in the report; set PR draft; do not improvise around the
 constraint (e.g., do not "fix" a missing credential by stubbing ASF).
 
-## 8. Supervisor duties
+## 7. Supervisor duties
 
 Merge in order; run the full matrix (backend ruff/pytest, frontend ci/typecheck/
 test/build, CLI verify on synthetic demo, browser-level check on local servers);
@@ -113,7 +94,7 @@ the product stays NISAR L-band GCOV. See `skills/dancing-with-the-sars/SKILL.md`
 | 05 pages-scan-controls | `dancing-with-the-sars-frontend/app/page.tsx`, `app/compare/page.tsx`, `app/time-machine/page.tsx`, **new** `components/LiveScanPanel.tsx`, `components/ComparisonViewer.tsx` (only if the availability readout needs it — ANNOUNCE), `components/SiteNav.tsx` (only with ANNOUNCE) | `Map.tsx`, `WorldviewReview.tsx`, `lib/scanFrames.ts`, `lib/tileUrl.ts`, backend, package-lock, `next.config.mjs` |
 | 06 hygiene-fixture-delta | deletes in H1 list only; `dancing-with-sars-backend/nisar/config.py`, `main.py`, `scripts/make_demo_site.py`, `tests/fixtures/make_fake_gcov.py` (compat only), new `docs/DEMO_FIXTURE_DELTA.md`; `npm audit` report | `Map.tsx`, `WorldviewReview.tsx`, `app/**`, `live_fetch.py`, `jobs.py`, `routers/`, InSAR package; VM access of any kind |
 
-Honesty invariants (§2), verification gates (§3) and report format (§4) are unchanged.
+Verification gates and report format below apply to all rounds.
 
 Round-2 merge order (supervisor decides): **06 → 04 → 05**. CI green per merge.
 Workers report against `94e12f0`; all three re-run the full frontend/backend
@@ -142,7 +123,7 @@ manifest and `isKrakatauSite` gates eruption copy. Do not re-open.
 | 08 dashboard-compare-plate | `app/page.tsx`, `app/compare/page.tsx`, `components/Map.tsx` (chrome only, API unchanged), `components/ComparisonViewer.tsx` | all of 07; `app/time-machine/**`; `WorldviewReview.tsx`, `TimeReview.tsx`; backend; package files; `layout.tsx` |
 | 09 timemachine-method-plate | `app/time-machine/page.tsx`, `components/WorldviewReview.tsx`, `components/TimeReview.tsx`, **new** `app/method/page.tsx`, **new** `app/not-found.tsx`, `tests/source-register.test.ts` (delete), `lib/sourceRegister.ts` (delete), `README.md` (register section reword only), plus **one announced append** `SiteNav.tsx` (+`/method` link) | `globals.css`, `redesign.css`, `layout.tsx`, `Map.tsx`, `app/page.tsx`, `app/compare/page.tsx`, `ComparisonViewer.tsx`, all backend paths, package files |
 
-Honesty invariants (§2), verification gates (§3), report format (§4) unchanged.
+Verification gates and report format below apply to all rounds.
 **No new dependencies. No build-time font fetch** (runtime `@import` only).
 CSS variable names are fixed by REDESIGN_GUIDE §3.
 

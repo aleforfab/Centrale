@@ -3,23 +3,18 @@
 Date: 2026-11-14
 Branch: `arena/73d543cc-centrale`
 
-## What is live right now
+## Preview state at the time of this brief
 
-Three preview processes are running with synthetic data only:
+This 2026-11-14 inventory documented a Next.js preview backed by a generated
+`demo-fixture` site and a standalone image player. On 2026-11-15, the interactive
+procedural demo routes and the standalone player were removed. The current
+`/time-machine` page reads installed site manifests and offers live fetch.
 
-| Preview | Port | What it shows |
-|---|---:|---|
-| Frontend redesign preview | `3000` | The current Next.js app: `/`, `/compare`, `/time-machine` |
-| SAR Time Machine prototype | `8765` | The standalone image-based evolution / swipe-compare player |
-| NISAR API | `8000` | FastAPI data and product endpoints behind the Next.js proxy |
+## Feature inventory at 2026-11-14
 
-The Next.js preview is backed by a generated `demo-fixture` site with 2 acquisitions, 12 layers, HH/HV polarizations and the required synthetic caveat. No real NISAR observations are present.
+### Frontend snapshot
 
-## Feature inventory
-
-### Current Next.js frontend
-
-| Route / area | Features today | Visual state today |
+| Route / area | Features then | Visual state then |
 |---|---|---|
 | `/` dashboard | Site, polarization and product-layer selectors; layer visibility; Mapbox map; time-series chart; pair statistics; ASF granule provenance; data-status banner; empty state | Dark slate dashboard, stacked controls, card-like sections, shared nav |
 | `/compare` | One curated pair, one polarization, two exact observation dates; reveal slider; locked cameras; provenance and caveat; explicit problem states when data is missing | Dark split-view viewer with controls and a problem panel |
@@ -28,35 +23,13 @@ The Next.js preview is backed by a generated `demo-fixture` site with 2 acquisit
 | Shared shell | `SiteNav`, root layout, global dark theme | Minimal shared navigation and `globals.css` |
 | Data access | Relative `/api/*` and `/products/*` URLs, server-side rewrite to `BACKEND_URL` | Browser never sees the backend address |
 
-### Standalone `sar-time-machine-prototype`
+### Time Machine page
 
-| Feature | Implementation detail |
-|---|---|
-| Evolution playback | Play/pause, step, timeline scrub, speed, loop; each observation gets equal screen time |
-| Swipe compare | Chosen baseline on the left, current frame on the right; draggable/keyboard-operable divider |
-| Zoom and pan | Mouse wheel and drag; both layers stay aligned |
-| Observation facts | Date, frame number, polarization, display range, days since previous, source |
-| Accessibility | Space and arrow keys, Home/End on swipe handle, reduced-motion support |
-| Honest labelling | Prominent “Synthetic demo” pill and notice that frames are not NISAR observations |
-| Contract | Emulates `GET /api/series` with ordered, coregistered, equally sized image frames |
-| Integration status | **Standalone only.** It does not use the main backend, site manifests or tile URLs |
+The current page reads site manifests, displays installed radar observations,
+plays exact dated frames, compares selected dates, and exposes live fetch as an
+explicit action. There is no procedural frame endpoint or standalone demo player.
 
-## Integration constraint that matters most
-
-The prototype expects full image frames from `/api/series`. The real project exposes site manifests with raster tile URL templates for `backscatter`, `difference`, `change_mask` and other layers, plus `acquisitions.json`, `timeseries.json` and `stats.json`.
-
-So a production “time machine” cannot simply substitute tile URLs for image URLs. It needs to:
-
-1. Select only `kind: "backscatter"` observation layers.
-2. Keep one polarization and one curated stack.
-3. Preserve exact dates; never invent intermediate observations.
-4. Handle tiled map loading, projection and camera synchronisation.
-5. Keep difference and change-mask layers out of the playback frames.
-6. Preserve synthetic caveats, provenance and attribution.
-
-This aligns with the existing `/compare` rule: no substitute date, no substitute polarization, no difference layer used as an observation.
-
-## Visualisation options by feature
+## Design options recorded in this brief
 
 | Feature | Strongest visual pattern | Notes |
 |---|---|---|
@@ -68,9 +41,9 @@ This aligns with the existing `/compare` rule: no substitute date, no substitute
 | Compare | Full-bleed split map with a central reveal handle, date chips and locked-camera indicator | Existing `/compare` logic can be restyled without changing its refusal rules |
 | Time Machine | Cinematic full-bleed player with a large date readout, gap-aware timeline and baseline swipe | Needs a tile-based adapter before it can use real project products |
 | Applications | Card grid with derived capability badges, “what exists” and “what a real study needs” columns | Do not hand-label topics as validated; labels stay derived |
-| Setup | Stepper / gate checklist with status dots and “not recorded” states | Honest empty states are part of the design |
+| Setup | Stepper / gate checklist with status dots and “not recorded” states | Use concise empty states |
 | Data status | Persistent chip in the top bar plus a clear empty-state card | Avoid implying data exists when no site is built |
-| Synthetic / empty states | Amber notice treatment with explicit “not a real observation” language | Product decision; do not soften or hide |
+| Empty states | Clear notice treatment with a link to available actions | Keep the product controls visible |
 
 ## Possible design directions
 
@@ -86,22 +59,12 @@ Scroll-led narrative with large imagery, explanatory copy, pull quotes and featu
 ### D. Light scientific workbench
 High-contrast light theme, clear typography, white panels and strong data tables. Better for reports and readability, but a larger departure from the current dark visual identity.
 
-## Scope choices for the next iteration
+## Scope choices recorded in this brief
 
 1. **Design-only first**: produce wireframes / a visual concept, change no app code.
 2. **Restyle existing routes**: unify `/` and `/compare` with a new design system; `/applications` and `/setup` were later retired.
 3. **Integrate Time Machine interactions**: add playback/scrub/swipe to the Next.js app using existing manifest layers and exact-date rules.
 4. **Build one new `/time-machine` route**: keep the current app intact and add a focused player route.
-
-## Honesty invariants to preserve
-
-From `CONTRIBUTING.md` and the current tests:
-
-- Synthetic sites must keep saying they are **not real observations**.
-- `/compare` must keep refusing to substitute a date, a polarization or a difference layer.
-- Capability labels stay derived from `CASE_REVIEWS`; do not hand-write “validated”.
-- Statistics must never be described as a validated scientific result.
-- Backscatter change is a measured difference, not a cause.
 
 ## Shared-file heads-up
 
@@ -118,32 +81,22 @@ The chosen deliverable is a clickable Next.js prototype on the map-first cinemat
 
 | Requested feature | Where it lives | Prototype behaviour |
 |---|---|---|
-| Restyle current routes | `AppShell`, `redesign.css`, `/`, `/compare`, `/time-machine` | Dark cinematic shell, glass panels, large optical-first map, compact controls, calendar date inputs and honest empty states remain intact |
+| Restyle current routes | `AppShell`, `redesign.css`, `/`, `/compare`, `/time-machine` | Dark cinematic shell, glass panels, large optical-first map, compact controls, calendar date inputs and clear empty states remain intact |
 | Mapbox region selection | `components/RegionSelector.tsx` | Draw/pan modes, drag-to-draw bbox, “use current view”, manual coordinates, visible bbox chips. The initial Mapbox style is optical satellite imagery; a local grid is only a fallback if the style cannot load |
-| Start scan from selected region | `POST /tm/scan`, “Start scan for selected region” button | Validates bbox and selected features, then returns eight ordered synthetic frames keyed by the exact bbox, polarization and feature set |
-| Choices for features selected | `components/FeatureChoices.tsx`, `lib/timeMachine.ts` | Backscatter, difference, mask, time series, provenance, playback and two-date compare; the right rail shows a panel for each selected feature |
-| Keep the slider | `components/TimeReview.tsx` | One event-date timeline slider with before/after event labels and a compare reveal slider |
-| Add playback | `TimeReview` | Play/pause, 0.5×–4× speed, equal time per dated frame, reduced-motion guard |
-| One event date or two dates | `TimeReview`, scan options, `/compare` | Mode toggle: one event date (before/after) or two exact dates to compare; calendar date inputs replace date selects, and only the range slider changes the before/after visual |
-| Exact-date honesty | `lib/comparison.ts`, `buildMockManifest()` | Only `backscatter` observation layers enter the mock manifest; no substitute date, polarization, difference or change-mask layer is used |
+| Live fetch | `components/LiveScanPanel.tsx`, `/api/nisar/fetch` | Selects a region, date window and HH/HV channels; submits a real backend request |
+| Layer selection | Dashboard `Layers` rail | Shows radar observations and one primary change product per date pair; other thresholds are grouped separately |
+| Playback | `components/CalendarReview.tsx` | Plays installed observations and uses the same map for date selection |
+| Date comparison | `components/CalendarReview.tsx`, `components/ComparisonViewer.tsx` | Compares the selected installed dates and polarization |
 
 ### Backend support check
 
-`POST /api/nisar/fetch` in the FastAPI backend already accepts an arbitrary `bbox`, `start_date`, `end_date`, `maturity`, `polarizations` and `max_granules`. It is not called by the prototype button: the button uses local route handlers that generate deterministic SVG frames from the selected bbox and feature set, and no real NISAR granule was downloaded or processed. A real live build still needs Earthdata credentials and the operator API. A production integration also needs tile loading, projection, camera synchronisation, exact-date gating, provenance and attribution.
-
-### Honesty invariants preserved
-
-- Prototype frames say they are **not a real observation**, not NISAR observations, not a real change and not evidence of anything.
-- Installed synthetic sites keep their original caveat.
-- `/compare` still refuses to substitute a date, a polarization or a difference/change-mask layer.
-- Capability labels remain derived from `CASE_REVIEWS`.
-- Statistics are described as measured outputs, not validated scientific results.
+`POST /api/nisar/fetch` accepts a `bbox`, date range, polarization selection and granule limit. The live-fetch panel uses this endpoint; a successful build appears in the installed site catalogue. Live access requires backend Earthdata credentials.
 
 ### Verification
 
 - Backend: `ruff check .` → `All checks passed!`; `pytest -q` → `110 passed, 11 warnings`.
-- Frontend: `npm ci`, `npm run typecheck`, `npm test` → `6 files / 65 tests passed`; `npm run build` → `7/7` pages generated, including `/time-machine`, `/tm/scan` and `/tm/frames/[date]`.
+- Historical frontend check (2026-11-14): `npm ci`, `npm run typecheck`, `npm test` → `6 files / 65 tests passed`; the build at that time included `/tm/scan` and `/tm/frames/[date]`, removed on 2026-11-15.
 - CI compatibility: the first pull-request run exposed that `jsdom@31` needs Node 22 while the existing CI workflow pins Node 20. The jsdom-only interaction test was removed instead of changing shared `package.json`, the lockfile or CI. Server-rendered control checks remain in the Node-environment suite, and no app code changed in that fix.
-- Live HTTP checks: `/`, `/compare`, `/time-machine`, `/api/data-status`, `/api/sites`, `/api/sites/demo-fixture`, `/tm/scan`, a synthetic frame, one product PNG tile and backend `/health` return `200`; the retired `/applications` and `/setup` routes return `404`.
+- Historical live HTTP checks (2026-11-14): `/`, `/compare`, `/time-machine`, `/api/data-status`, `/api/sites`, `/api/sites/demo-fixture`, the old scan routes and a product tile returned `200`; `/applications` and `/setup` returned `404`.
 - The public `pk.*` Mapbox token is committed in `lib/mapboxToken.ts` and used as fallback when no valid environment override exists; CI's `dummy_token` no longer disables the basemap. The Mapbox Satellite Streets v12 style endpoint accepted the token. Initial region selector and dashboard map request optical satellite imagery; actual raster-tile rendering in a browser was not visually verified from the sandbox, and the local grid remains the fallback if Mapbox is unreachable.
 - The dashboard backscatter graph and regional time-series controls were removed to reduce information density. Interferometry and angle normalization are now selectable *proposed* feature panels; neither computes a result from GCOV backscatter.

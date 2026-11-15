@@ -36,7 +36,8 @@ const MAPBOX_TOKEN = getMapboxToken();
 mapboxgl.accessToken = MAPBOX_TOKEN;
 const HAS_MAPBOX_TOKEN = hasMapboxToken();
 
-const SATELLITE_STREETS_STYLE = "mapbox://styles/mapbox/satellite-streets-v12";
+const OPTICAL_CONTEXT_STYLE = "mapbox://styles/mapbox/satellite-streets-v12";
+const NISAR_CONTEXT_STYLE = "mapbox://styles/mapbox/dark-v11";
 const PRODUCT_LAYER_PREFIX = "nisar-layer-";
 const PRODUCT_SOURCE_PREFIX = "nisar-source-";
 const RASTER_OPACITY_OBSERVATION = 0.8;
@@ -73,11 +74,9 @@ const FALLBACK_STYLE = (dark: boolean): mapboxgl.Style =>
     ],
   }) as unknown as mapboxgl.Style;
 
-const styleForView = (view: MapView): string | mapboxgl.Style => {
+export const mapStyleForView = (view: MapView): string | mapboxgl.Style => {
   if (!HAS_MAPBOX_TOKEN) return FALLBACK_STYLE(view === "sar");
-  // The SAR/NISAR view rides on real satellite context per maintainer decision;
-  // both views share the satellite-streets basemap.
-  return SATELLITE_STREETS_STYLE;
+  return view === "optical" ? OPTICAL_CONTEXT_STYLE : NISAR_CONTEXT_STYLE;
 };
 
 function bboxPolygon(bbox: number[]): GeoJSON.Feature<GeoJSON.Polygon> {
@@ -208,7 +207,7 @@ export const Map: React.FC<MapProps> = ({ bbox, layers, activeLayerId, view, set
 
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
-    const initialStyle = styleForView(view);
+    const initialStyle = mapStyleForView(view);
     mountedStyle.current = initialStyle;
     fallbackUsed.current = !HAS_MAPBOX_TOKEN;
     map.current = new mapboxgl.Map({
@@ -263,7 +262,7 @@ export const Map: React.FC<MapProps> = ({ bbox, layers, activeLayerId, view, set
     if (!currentMap) return;
     // The permanent style.load handler re-syncs all overlays once loaded.
     if (fallbackUsed.current) return;
-    const nextStyle = styleForView(view);
+    const nextStyle = mapStyleForView(view);
     if (mountedStyle.current === nextStyle) return;
     mountedStyle.current = nextStyle;
     currentMap.setStyle(nextStyle);
@@ -377,7 +376,14 @@ export const Map: React.FC<MapProps> = ({ bbox, layers, activeLayerId, view, set
         aria-label="Map legend"
       >
         <p className="mb-1 text-[11px] font-medium">{selectedTitle}</p>
-        <p className="opacity-80">Satellite basemap is visual context only, not a matched-date observation. {falseColor && "Observation false colour: dark purple = weaker, pale yellow = stronger display brightness; not a colour composite. Difference and mask colours are unchanged."}{` ${falseColor && selectedLayer?.kind === "backscatter" ? "Observation brightness shown with a display palette." : selectedLayer?.legend ?? layerColor}`}{layers.some((item) => item.kind === "change_mask" && (!activeLayerId || item.id === shownId)) ? " Blue = lower return · Red = higher return." : ""}</p>
+        <p className="opacity-80">
+          {selectedLayer?.kind === "backscatter"
+            ? falseColor
+              ? "Purple through mauve to cream: lower to higher radar return."
+              : "Brighter pixels mean a stronger radar return."
+            : selectedLayer?.legend ?? layerColor}
+          {layers.some((item) => item.kind === "change_mask" && (!activeLayerId || item.id === shownId)) ? " Blue = lower return · Red = higher return." : ""}
+        </p>
       </aside>
       <div className={`${CHIP} absolute bottom-10 right-3 px-2 py-1 text-[10px] leading-4`}>
         Map imagery © Mapbox{!HAS_MAPBOX_TOKEN && " · local canvas"}

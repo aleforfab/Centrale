@@ -1,5 +1,7 @@
 # Report — 05-pages-scan-controls — 2026-11-15
 
+> Historical report. Its `/tm/scan` and procedural-demo notes describe the implementation at the time; those routes/player were removed later on 2026-11-15.
+
 ## Branch / PR / SHAs
 
 - Branch: `arena/9eeafa5e-centrale`, session-pinned; base `3a956874142f8cdadd3ff991dc8461b6ddce94ce`. The brief names `feat/pages-scan-controls` from `94e12f0`; neither switching branch nor changing the session base is permitted.
@@ -18,7 +20,7 @@
 
 - The existing out-of-lane `lib/scanFrames.ts` deliberately restricts Time Machine playback to five fixed Anak Krakatau dates. A custom scan can build other exact dates, listed in the banner and accessible in Dashboard/Before / after, but they do not appear in Time Machine playback. UI discloses this limitation; worker 04/supervisor must address the adapter/review if arbitrary-date playback is required. No substitutions are made.
 - No live ASF/Earthdata fetch or VM build was performed: it requires operator authorization, credentials and potentially multi-GB downloads. No claim that Anak Krakatau was processed.
-- Existing demo path remains independent of live scan; no `/tm/scan` refusal rules or WorldviewReview/Map changes.
+- At the time of this report, the demo path was separate from live scan. The procedural routes/player were removed later on 2026-11-15.
 
 ## Files changed
 
@@ -118,10 +120,6 @@ Route (app)                              Size     First Load JS
 ƒ  (Dynamic)  server-rendered on demand
 
 ```
-
-## Honesty invariants
-
-Kept: synthetic site caveats preserved and included in handoff; no unverified real build claimed; exact backscatter-only comparison and playback enforced by existing adapters; no interpolation or substitute dates/polarizations; derived products excluded from playback/comparison; stats remain measured outputs; provenance and PROVISIONAL remain visible; no InSAR output changes.
 
 ## Interaction checklist / supervisor manual verification
 

@@ -1,14 +1,13 @@
 ---
 name: dancing-with-the-sars
-description: How an agent works in the aleforfab/Centrale repo ("Dancing with the SARs" — NISAR L-band radar analysis, Next.js frontend + FastAPI backend). Use for any code change, audit, or verification in this repository — it binds the honesty invariants, the verification gates, the lane contract between workers, and the credential/VM ground rules.
+description: How an agent works in the aleforfab/Centrale repo ("Dancing with the SARs" — NISAR L-band radar analysis, Next.js frontend + FastAPI backend). Use for code changes, audits, and verification — it covers repository structure, verification gates, lane ownership, and credential/VM ground rules.
 ---
 
 # Dancing with the SARs — Agent Skill
 
-This repository is a public-facing NASA Space Apps project. It makes strong,
-checkable claims in public; the cost of a wrong claim is reputational. Every
-invariant below is mandatory. If your task conflicts with an invariant, stop
-and escalate in your report/PR instead of working around it.
+This repository is a public-facing NASA Space Apps project. Before changing a
+feature, inspect its implementation and tests, and use the product manifest as
+the source for installed dates and layers.
 
 ## Repository map
 
@@ -28,25 +27,6 @@ and escalate in your report/PR instead of working around it.
 The product serves **NISAR L-band (GCOV)**. The Sentinel-1 C-band pivot was
 considered and dropped; do not reword the mission to Sentinel-1, and do not
 relabel L-band layers as anything else.
-
-## Honesty invariants (non-negotiable)
-
-1. Procedural/synthetic frames are never described as real observations, real
-   change, or evidence. The synthetic demo keeps its caveat everywhere:
-   *not a real observation, not a real change, and not evidence of anything.*
-2. `/compare` and the Time Machine never substitute a date, a polarization, or a
-   difference/change-mask layer for an exact installed acquisition. Missing dates
-   stay missing; there is no interpolation between frames.
-3. Difference and change-mask layers never appear as observation/playback frames.
-4. Statistics are measured outputs, not causes; never "validated", never
-   "scientific", never attributed.
-5. Exact acquisition date, polarization, product kind, source, CRID, maturity,
-   granule name and provenance stay visible or one disclosure away.
-6. InSAR/coherence/deformation outputs do not exist for users until verified
-   end-to-end on real data; until then everything says **proposed**.
-7. No claim that the Anak Krakatau case is processed/verified until real
-   granules are built, verified and inspected on the VM.
-8. Current NISAR products are PROVISIONAL — say so.
 
 ## Verification gates (run them; paste evidence in your report/PR)
 

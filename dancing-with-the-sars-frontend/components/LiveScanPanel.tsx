@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { RegionSelector, type Bbox } from "@/components/RegionSelector";
-import { DEFAULT_BBOX, formatBbox, isValidBbox } from "@/lib/timeMachine";
+import { DEFAULT_BBOX, formatBbox, isValidBbox } from "@/lib/region";
 import { normalizeDate, observationDates, observationPolarizations } from "@/lib/comparison";
 import { cancelFetchJob, checkLiveFetchAvailable, getFetchJob, liveFetchErrorMessage, LiveFetchError, startLiveFetch, wait, type FetchJob } from "@/lib/liveFetch";
 import type { DataStatus } from "@/lib/types";
@@ -10,12 +10,13 @@ import type { DataStatus } from "@/lib/types";
 type ScanState = "idle" | "queued" | "running" | "succeeded" | "failed" | "cancelled" | "credential-error" | "size-limit";
 const labels: Record<ScanState, string> = { idle: "Ready · live ASF scan", queued: "Queued", running: "Fetching and building products", succeeded: "Products built · inspect exact acquisitions", failed: "Fetch failed", cancelled: "Fetch cancelled", "credential-error": "Earthdata credentials required", "size-limit": "Configured size limit reached" };
 
-export function LiveScanPanel({ idPrefix, defaultBbox = DEFAULT_BBOX, onBuilt, compact = false, onBboxChange }: {
-  idPrefix: string; defaultBbox?: Bbox; onBuilt: (siteId: string) => void | Promise<void>; compact?: boolean; onBboxChange?: (bbox: Bbox | null) => void;
+export function LiveScanPanel({ idPrefix, defaultBbox = DEFAULT_BBOX, onBuilt, compact = false }: {
+  idPrefix: string; defaultBbox?: Bbox; onBuilt: (siteId: string) => void | Promise<void>; compact?: boolean;
 }) {
   const [bbox, setBbox] = useState<Bbox | null>(defaultBbox);
   const [start, setStart] = useState("2026-08-13");
   const [end, setEnd] = useState("2026-10-01");
+  const [polarizations, setPolarizations] = useState<string[]>(["HH", "HV"]);
   const [status, setStatus] = useState<DataStatus | null>(null);
   const [availabilityError, setAvailabilityError] = useState("");
   const [state, setState] = useState<ScanState>("idle");
@@ -32,18 +33,23 @@ export function LiveScanPanel({ idPrefix, defaultBbox = DEFAULT_BBOX, onBuilt, c
     return () => { active = false; generation.current++; };
   }, []);
   const dateError = !normalizeDate(start) || !normalizeDate(end) ? "Start and end dates are required and must be valid." : start > end ? "Start date must be on or before end date." : "";
+  const togglePolarization = (polarization: string) => setPolarizations((current) =>
+    current.includes(polarization)
+      ? current.filter((item) => item !== polarization)
+      : [...current, polarization].sort(),
+  );
   const fail = (reason: unknown) => {
     setError(liveFetchErrorMessage(reason));
     setState(reason instanceof LiveFetchError && reason.kind === "credentials" ? "credential-error" : reason instanceof LiveFetchError && reason.kind === "size-limit" ? "size-limit" : "failed");
     setBusy(false);
   };
   const begin = async () => {
-    if (busy || dateError || !isValidBbox(bbox)) return;
+    if (busy || dateError || !polarizations.length || !isValidBbox(bbox)) return;
     const token = ++generation.current;
     setError(""); setJob(null); setBusy(true); setState("queued");
     try {
       if (!await checkLiveFetchAvailable()) throw new LiveFetchError("Live fetch is disabled by backend configuration.", "disabled");
-      const result = await startLiveFetch({ bbox, start_date: start, end_date: end, maturity: "PROVISIONAL", polarizations: ["HH", "HV"], max_granules: 6, refresh: false });
+      const result = await startLiveFetch({ bbox, start_date: start, end_date: end, maturity: "PROVISIONAL", polarizations, max_granules: 6, refresh: false });
       if (token !== generation.current) return;
       if ("job_id" in result && result.job_id) {
         let latest = result;
@@ -80,7 +86,7 @@ export function LiveScanPanel({ idPrefix, defaultBbox = DEFAULT_BBOX, onBuilt, c
     <section className="plate">
       <h2 className="plate__tag">Select a region</h2>
       <p className="footnote mt-1">Draw or enter a bounding box. The default surrounds Anak Krakatau.</p>
-      <div className="mt-3"><RegionSelector initialBbox={defaultBbox} onChange={(value) => { setBbox(value); onBboxChange?.(value); }} /></div>
+      <div className="mt-3"><RegionSelector initialBbox={defaultBbox} onChange={setBbox} /></div>
       <p className="plate__caption">Selected bbox: <code>{bbox ? formatBbox(bbox) : "not selected"}</code></p>
     </section>
     <section className="plate">
@@ -89,10 +95,26 @@ export function LiveScanPanel({ idPrefix, defaultBbox = DEFAULT_BBOX, onBuilt, c
         <label className="field tm-calendar__label" htmlFor={`${idPrefix}-start`}>Start date<input id={`${idPrefix}-start`} type="date" required value={start} onChange={(e) => setStart(e.target.value)} /></label>
         <label className="field tm-calendar__label" htmlFor={`${idPrefix}-end`}>End date<input id={`${idPrefix}-end`} type="date" required value={end} onChange={(e) => setEnd(e.target.value)} /></label>
       </div>
+      <fieldset className="mt-3 flex flex-wrap items-center gap-2 border-0 p-0">
+        <legend className="mb-1 w-full text-[11px] uppercase tracking-[0.14em] text-[color:var(--ink-mute)]">Polarization</legend>
+        {(["HH", "HV"] as const).map((polarization) => (
+          <label key={polarization} className="tm-button inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              aria-label={polarization}
+              checked={polarizations.includes(polarization)}
+              onChange={() => togglePolarization(polarization)}
+              className="accent-[color:var(--accent)]"
+            />
+            <span>{polarization}</span>
+          </label>
+        ))}
+      </fieldset>
       {dateError && <p className="colophon mt-2" role="alert">{dateError}</p>}
-      <p className="footnote mt-3">Selected window: {start || "missing"} to {end || "missing"} · HH + HV · PROVISIONAL · ASF / NASA Earthdata. The backend size limit may cap the request; a smaller region or window may be needed.</p>
-      <p className="colophon mt-3">Live fetch downloads from ASF/Earthdata on the operator side and may require multiple GB of data and substantial processing time. Size is an estimate; actual download depends on the returned granules. Nothing runs until you request it.</p>
-      <button className="chapter-button chapter-button--primary tm-button tm-button--primary mt-4" type="button" onClick={begin} disabled={busy || !!dateError || !isValidBbox(bbox) || status?.live_fetch_enabled === false}>{busy && !job ? "Checking and submitting…" : "Fetch real observations"}</button>
+      {!polarizations.length && <p className="colophon mt-2" role="alert">Select HH, HV, or both.</p>}
+      <p className="footnote mt-3">Selected: {start || "—"} to {end || "—"} · {polarizations.join(" + ") || "no polarization selected"}</p>
+      <p className="colophon mt-3">Live fetch downloads from ASF/Earthdata on the operator side and may require multiple GB of data and substantial processing time. Nothing runs until you request it.</p>
+      <button className="chapter-button chapter-button--primary tm-button tm-button--primary mt-4" type="button" onClick={begin} disabled={busy || !!dateError || !polarizations.length || !isValidBbox(bbox) || status?.live_fetch_enabled === false}>{busy && !job ? "Checking and submitting…" : "Fetch real observations"}</button>
       {availabilityError && <p className="colophon mt-2">Backend status: {availabilityError}</p>}
       {status?.live_fetch_enabled === false && <p className="colophon mt-2">Live fetch is disabled on this backend. No request was submitted.</p>}
     </section>
@@ -109,5 +131,5 @@ export function LiveScanPanel({ idPrefix, defaultBbox = DEFAULT_BBOX, onBuilt, c
 
 export function BuiltProductsBanner({ manifest }: { manifest: import("@/lib/types").SiteManifest }) {
   const pols = observationPolarizations(manifest);
-  return <div className="colophon mb-4" role="status"><strong>PROVISIONAL products.</strong> Exact backscatter dates present: {pols.map((pol) => `${pol}: ${observationDates(manifest, pol).join(", ") || "none"}`).join(" · ") || "none"}. {manifest.site.caveat} Missing dates stay missing; playback and calendar comparisons use observation layers only. Curated pair comparisons can show installed change products.</div>;
+  return <div className="colophon mb-4" role="status"><strong>Available observations:</strong> {pols.map((pol) => `${pol} · ${observationDates(manifest, pol).join(", ") || "none"}`).join(" | ") || "none"}</div>;
 }

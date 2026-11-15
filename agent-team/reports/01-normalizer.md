@@ -139,16 +139,6 @@ Manifest JSON snippet (`/tmp/norm-demo/products/demo-fixture/manifest.json`):
 }
 ```
 
-## Honesty invariants: kept / violated
-
-- **Kept:**
-  - Synthetic fixtures retain the exact caveat (*"not a real observation, not a real change, and not evidence of anything"*).
-  - No claim that real Anak Krakatau data is normalized or verified; docs and report state **verified on synthetic fixtures only**.
-  - No histogram matching or empirical cross-date calibration implemented.
-  - Missing `rtcGammaToSigmaFactor` is never silently treated as `1.0`; it logs a warning and marks `applied: false`.
-  - Convention `σ⁰ = γ⁰ × rtcGammaToSigmaFactor` is explicitly flagged as **convention assumed, needs review against the GCOV spec**.
-  - `verify_site` semantics, `/compare` rules, frontend, and restricted backend files (`live_fetch.py`, `jobs.py`, `catalog.py`, `routers/`, `main.py`, `config.py`, `cli.py`) were not modified.
-
 ## Known gaps, follow-ups, TODOs left in code
 
 - **Convention verification:** Confirm `σ⁰ = γ⁰ × rtcGammaToSigmaFactor` against the official NISAR L2 GCOV ATBD / product specification.

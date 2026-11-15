@@ -32,9 +32,8 @@ Maintainer testing found three defects in the interaction model:
 - The request body sent to `POST /api/nisar/fetch` uses the selected window;
   maturity (PROVISIONAL), polarizations (HH+HV), `max_granules` stay fixed.
 - Copy that previously printed the hardcoded window must print the selected one.
-- Honesty unchanged: exact-date viewer over installed backscatter frames only;
-  no interpolation; missing dates stay missing; difference/change-mask excluded
-  from playback; PROVISIONAL + caveat intact.
+- Playback uses installed backscatter frames on exact dates; missing dates stay
+  unavailable, and difference/change-mask layers stay out of playback.
 
 ### G2 — Shared live-scan panel, wired into Dashboard and Before/After
 
@@ -56,7 +55,7 @@ Wire it in:
 - **Time Machine**: refactor it to use the shared panel (delete its inlined copy).
 - All three pages show the same terminal states (credential/disabled/size-limit/
   failed/cancelled) and the same "PROVISIONAL products…" banner after a build.
-- Cost honesty: the panel states that live fetch downloads from ASF/Earthdata
+- Cost note: the panel states that live fetch downloads from ASF/Earthdata
   (multi-GB, operator-side) and shows an estimate note; it never runs implicitly.
 - `next.config.mjs` is not touched. The panel uses relative `/api` URLs only.
 - Live-fetched sites are registered in the shared products dir and listed by
@@ -98,7 +97,7 @@ Wire it in:
 After a successful live build: auto-select the built site; banner stating the
 PROVISIONAL maturity, the exact dates present, and the synthetic/real caveat;
 missing dates stay missing everywhere; difference/change-mask layers never enter
-playback or compare selection (existing `/tm/scan` refusal rules untouched);
+playback or compare selection (retain exact installed-date behavior);
 no substitutions anywhere.
 
 ### B5 (from the map issue) — legend under the selector

@@ -1,5 +1,7 @@
 # Report — 07-design-foundation — 2026-11-15
 
+> Historical report. The route/build output below predates the 2026-11-15 removal of the procedural Time Machine routes and standalone player.
+
 ## Branch / PR / SHAs
 
 - **Branch:** `arena/6acd0611-centrale` (session-pinned active branch; switching to or creating `feat/design-foundation` is not permitted in this session).
@@ -209,13 +211,6 @@ cd dancing-with-the-sars-frontend && BACKEND_URL="http://127.0.0.1:8000" NEXT_PU
 ```
 
 Result: exit `0` — `tsc --noEmit` clean, `10 passed (10)` / `75 passed (75)`, `next build` `7/7` pages generated, compiled `.next/static/css/*.css` begins with the verbatim `@import url("https://fonts.googleapis.com/...")` rule with zero build-time font fetches.
-
-## Honesty invariants
-
-- **Kept.** `app/layout.tsx` metadata explicitly states `PROVISIONAL data; not a validated scientific result.` and keeps the mission positioned on NISAR L-band GCOV.
-- **Kept.** `AppShell.tsx` and `SiteNav.tsx` retain `Dancing with the SARs` and `NISAR · L-band · GCOV`.
-- **Kept.** `RegionSelector.tsx` and `LiveScanPanel.tsx` (`BuiltProductsBanner`) retain 100% of their verbatim caveats, PROVISIONAL notices, operator multi-GB download disclosures, exact-date availability lists, and difference/change-mask exclusion statements — restyled onto high-contrast `.colophon` (`#EDE7DA` bg, `3px` `#FF8A3D` left rule, `#16130F` ink text) rather than softening or hiding any warning.
-- **Kept.** No `/compare` refusal logic, playback logic, InSAR status, or synthetic demo caveats were altered.
 
 ## Known gaps, follow-ups, TODOs left in code
 

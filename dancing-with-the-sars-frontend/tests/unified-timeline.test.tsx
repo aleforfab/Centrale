@@ -4,12 +4,17 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, expect, it, vi } from "vitest";
 import type { ProductLayer, SiteManifest } from "@/lib/types";
 const calls = vi.hoisted(() => ({ layers: [] as ProductLayer[][] }));
-vi.mock("@/components/Map", () => ({ Map: ({ layers, activeLayerId, onActiveLayerChange, falseColor, onFalseColorChange }: { layers: ProductLayer[]; activeLayerId: string; onActiveLayerChange: (id: string) => void; falseColor: boolean; onFalseColorChange: (value: boolean) => void }) => {
+vi.mock("@/components/Map", () => ({ Map: ({ layers, activeLayerId, onActiveLayerChange, falseColor, onFalseColorChange, view, setView }: { layers: ProductLayer[]; activeLayerId: string; onActiveLayerChange: (id: string) => void; falseColor: boolean; onFalseColorChange: (value: boolean) => void; view: "optical" | "sar"; setView: (value: "optical" | "sar") => void }) => {
   calls.layers.push(layers);
   useEffect(() => { onActiveLayerChange(activeLayerId); }, [activeLayerId, onActiveLayerChange]);
-  return <button onClick={() => onFalseColorChange(!falseColor)}>Palette {falseColor ? "on" : "off"}</button>;
+  return <>
+    <span>Playback view {view}</span>
+    <button onClick={() => setView("optical")}>Select Optical context</button>
+    <button onClick={() => setView("sar")}>Select NISAR</button>
+    <button onClick={() => onFalseColorChange(!falseColor)}>Palette {falseColor ? "on" : "off"}</button>
+  </>;
 } }));
-vi.mock("@/components/ComparisonViewer", () => ({ ComparisonViewer: ({ falseColor }: { falseColor: boolean }) => <div>Compare palette {falseColor ? "on" : "off"}</div> }));
+vi.mock("@/components/ComparisonViewer", () => ({ ComparisonViewer: ({ falseColor, view }: { falseColor: boolean; view: "optical" | "sar" }) => <div>Compare palette {falseColor ? "on" : "off"} · {view}</div> }));
 import { CalendarReview } from "@/components/CalendarReview";
 const dates = ["2026-08-13", "2026-08-25", "2026-09-06"];
 const manifest: SiteManifest = {
@@ -38,8 +43,10 @@ it("switches dates without remounting the frame set, plays and keeps the palette
   act(() => { vi.advanceTimersByTime(1200); });
   expect(screen.getByText(/Frame 1 \/ 3/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Palette off" }));
+  fireEvent.click(screen.getByRole("button", { name: "Select Optical context" }));
   fireEvent.click(screen.getByRole("button", { name: "Before / after" }));
-  expect(screen.getByText("Compare palette on")).toBeTruthy();
+  expect(screen.getByText("Compare palette on · optical")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Time Machine" }));
   expect(screen.getByRole("button", { name: "Palette on" })).toBeTruthy();
+  expect(screen.getByText("Playback view optical")).toBeTruthy();
 });

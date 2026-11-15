@@ -22,7 +22,7 @@ phase history in [`HACKATHON.md`](HACKATHON.md) and [`agent-team/PLAN.md`](agent
 | `/` | Observation Plate: installed NISAR product layers, exact dates, measured change statistics, map + provenance |
 | `/compare` | Before/after diptych: one polarization, two exact installed dates, reveal slider, locked cameras, no substitutions |
 | `/time-machine` | Live-fetch scan (operator-side) + Worldview-style playback of exact backscatter frames, before/after mode |
-| `/method` | Method & honesty register: data, processing, what the numbers are and are not, provenance |
+| `/method` | Method & provenance: radar layers, processing, and source references |
 
 
 Supporting material:

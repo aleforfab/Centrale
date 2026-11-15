@@ -56,7 +56,7 @@ Quick reference for what needs to be done next.
   - Pydantic models, 404 with valid IDs, CORS
   - Tests with TestClient
 
-- [x] **T3.2: Honest Data Status**
+- [x] **T3.2: NISAR Data Status**
   - Dynamic `nisar_ready` from PRODUCTS_DIR
   - Update `/api/data-status` and `/health`
   - Remove hardcoded False

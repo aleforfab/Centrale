@@ -1,5 +1,7 @@
 # Report — 06-hygiene-fixture-delta — 2026-11-15
 
+> Historical report. The route/build output below predates the 2026-11-15 removal of the procedural Time Machine routes and standalone player.
+
 ## Branch / PR / SHAs
 
 - **Branch:** `arena/5832995f-centrale` (session-pinned active branch; switching/creating `chore/hygiene-fixture-delta` is not permitted in this session).
@@ -29,7 +31,7 @@
   - Default `(0.0, 0.0)` maps directly to UTM `(0.0, 0.0)` m in `EPSG:32646`, preserving byte-compatible YAML and bit-identical HDF5 coordinate datasets for existing callers and tests.
   - Non-zero origins are validated against `pyproj.CRS("EPSG:32646").area_of_use` (`90.0°E–96.0°E`, `0.0°N–84.0°N`, plus full grid NE corner check) and converted through the shared `EPSG:32646 <-> EPSG:4326` transformer (`TransformDirection.INVERSE`).
   - Threaded optional `origin_easting_m: float = 0.0` and `origin_northing_m: float = 0.0` through `tests/fixtures/make_fake_gcov.py` (`create_fake_gcov`, `create_fake_gcov_pair`) and `make_demo_site.py` (`bbox_from_grid`, `build_site_config`).
-  - Created `docs/DEMO_FIXTURE_DELTA.md` covering purpose, verified `EPSG:32646` bounds, exact delta-fringe coordinates/bbox, operator commands (`make_demo_site` + `nisar.cli build-site` + `verify`), and the mandatory honesty paragraph.
+  - Created `docs/DEMO_FIXTURE_DELTA.md` covering purpose, verified `EPSG:32646` bounds, exact delta-fringe coordinates/bbox, operator commands (`make_demo_site` + `nisar.cli build-site` + `verify`), and a fixture-status paragraph.
 - **H5 — Report-only checks & pre-delete `git grep` verification:** completed and recorded below.
 
 ## Scope not done (and why)
@@ -267,14 +269,6 @@ Per-package advisory summary:
 | `esbuild` | moderate | transitive (dev) | `GHSA-67mh-4wv8-2f99` (moderate) | major bump required (`vitest@5.1.0`) |
 | `postcss-selector-parser` | moderate | transitive | `GHSA-rj75-hqrm-r3gf` (moderate) | non-breaking (`npm audit fix`; not applied — report-only) |
 | `vite-node` | moderate | transitive (dev) | via `vite` | major bump required (`vitest@5.1.0`) |
-
-## Honesty invariants
-
-- **Kept.** `make_demo_site.py` preserves `CAVEAT` (*"Synthetic fixture data: not a real observation, not a real change, and not evidence of anything."*) in both default and delta-fringe modes.
-- **Kept.** `docs/DEMO_FIXTURE_DELTA.md` states verbatim that the location is arbitrary, the data remains synthetic, and it is not a real observation, not a real change, and not evidence of anything about the Sundarbans, Bangladesh, or the Ganges–Brahmaputra delta.
-- **Kept.** Geodetic truthfulness: `make_demo_site.py` enforces `EPSG:32646`'s true UTM zone 46N longitude span (`90.0°E–96.0°E`) rather than generating coordinates outside zone 46N while claiming `EPSG:32646`.
-- **Kept.** No `/compare`, playback, InSAR, or Sentinel-1 mission semantics were altered; Earth Engine fallback stays disabled by default.
-- **Kept.** No claim that the VM demo fixture has been rebuilt or that real Anak Krakatau granules have been built.
 
 ## Known gaps, follow-ups, TODOs left in code
 

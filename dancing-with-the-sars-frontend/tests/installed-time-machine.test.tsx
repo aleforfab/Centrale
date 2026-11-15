@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { ProductLayer } from "@/lib/types";
 const dates = ["2026-08-13", "2026-08-25", "2026-09-06", "2026-09-18", "2026-09-30"];
@@ -16,10 +16,16 @@ vi.mock("@/components/Map", () => ({ Map: ({ layers }: { layers: ProductLayer[] 
 vi.mock("@/components/ComparisonViewer", () => ({ ComparisonViewer: () => null }));
 import TimeMachinePage from "@/app/time-machine/page";
 afterEach(cleanup);
-it("loads five installed frames without a live fetch", async () => {
+it("loads five installed frames and keeps the dashboard site selector in playback and before/after", async () => {
   render(<TimeMachinePage />);
   expect(await screen.findByText(/Frame 1 \/ 5/)).toBeTruthy();
   const availability = screen.getByText(/Available HH dates:/).textContent ?? "";
   for (const date of dates) expect(availability).toContain(date);
   expect(screen.getByText("Live fetch disabled")).toBeTruthy();
+  const siteSelect = screen.getByLabelText("Site") as HTMLSelectElement;
+  expect(siteSelect.value).toBe("anak-krakatau");
+  expect(siteSelect.options[0].text).toBe("Anak Krakatau");
+
+  fireEvent.click(screen.getByRole("button", { name: "Before / after" }));
+  expect(screen.getByLabelText("Site")).toBeTruthy();
 });

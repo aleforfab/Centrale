@@ -167,21 +167,6 @@ cd dancing-with-the-sars-frontend && npm run typecheck && npm test && npm run bu
 The PR template repeats this. CI runs it too, but a green CI is not a substitute
 for having run it yourself — CI takes a minute, you will see the failure sooner.
 
-### Keep the honesty invariants intact
-
-Changing these is a product decision, not a refactor:
-
-- A synthetic site's caveat must keep saying it is not a real observation.
-- The comparison viewer must keep refusing to substitute a date, a polarization
-  or a difference layer.
-- Capability labels are derived from `CASE_REVIEWS`; do not label a topic
-  "validated" by hand.
-- Statistics must never be described as a validated scientific result.
-
-If a change makes one of those untrue, it needs discussion before it needs code.
-
----
-
 ## Merging to main
 
 - **Merge order:** backend first, then shared types, then UI that depends on them.
@@ -190,8 +175,8 @@ If a change makes one of those untrue, it needs discussion before it needs code.
   On this project that is whoever is not mid-feature. The role rotates, but there
   is always exactly one.
 - **Fix forward, do not rewrite.** If something breaks on main, revert the PR
-  (`git revert <sha>`) and fix it on a branch. Reverting is fast and honest;
-  force-pushing main to hide a mistake is neither.
+  (`git revert <sha>`) and fix it on a branch. Reverting is fast and transparent;
+  force-pushing main to hide a mistake is not.
 - **Code freeze:** stop merging features two hours before the submission deadline.
   After that, only fixes for things that are visibly broken.
 

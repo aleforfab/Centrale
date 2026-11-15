@@ -164,13 +164,18 @@ def _remote_granules(
         maxResults=Config.MAX_RESULTS,
         session=session,
     )
+    requested_polarizations = {pol.upper() for pol in config.polarizations}
     candidates = []
     for product in results:
         try:
             parsed = parse_granule_name(product.properties.get("sceneName", ""))
         except ValueError:
             continue
-        if _matches_stack(parsed, stack) and _date_key(start) <= parsed.start[:8] <= _date_key(end):
+        if (
+            _matches_stack(parsed, stack)
+            and _date_key(start) <= parsed.start[:8] <= _date_key(end)
+            and requested_polarizations.issubset(set(parsed.polarizations()))
+        ):
             candidates.append((product, parsed, session))
     if not candidates:
         raise SiteBuildError("ASF found no NISAR GCOV granules matching the configured stack and dates")

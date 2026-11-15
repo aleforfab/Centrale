@@ -53,6 +53,16 @@ class TestParseGranuleName:
         assert result.crid == "P05023"
         assert result.counter == 1
 
+    def test_dual_h_transmit_mode_exposes_hh_and_hv(self):
+        """DHDH GCOV granules carry the HHHH and HVHV channels."""
+        name = "NISAR_L2_PR_GCOV_012_122_D_067_4005_DHDH_A_20260701T160541_20260701T160622_P05023_P_F_J_001"
+        assert parse_granule_name(name).polarizations() == ["HH", "HV"]
+
+    def test_single_hh_mode_exposes_hh(self):
+        """SHSH is the single-polarization HH mode in the inspected ASF product."""
+        name = "NISAR_L2_PR_GCOV_033_120_A_141_4005_SHSH_A_20261020T132745_20261020T132822_P05023_N_F_J_001"
+        assert parse_granule_name(name).polarizations() == ["HH"]
+
     def test_parse_urgent_response(self):
         """Test parsing UR (urgent response) ptype."""
         name = "NISAR_L2_UR_GCOV_012_122_D_067_4005_DHDH_A_20260701T160541_20260701T160622_P05023_P_F_J_001"

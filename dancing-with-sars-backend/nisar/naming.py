@@ -77,15 +77,18 @@ class NisarGranuleName:
         return f"{self.end[:4]}-{self.end[4:6]}-{self.end[6:8]}T{self.end[9:11]}:{self.end[11:13]}:{self.end[13:15]}Z"
     
     def polarizations(self) -> list[str]:
-        """Extract polarizations from pol_code."""
-        # Pol code is 4 characters, e.g., DHDH = dual-pol H-transmit
-        # Common codes: DHDH, DVVH, DHHV, DVHV, etc.
+        """Return the GCOV backscatter channels encoded by the granule mode."""
+        # The mode in a granule name is not itself a raster polarization. For
+        # example, NISAR's DHDH dual-pol products contain HHHH and HVHV datasets.
+        # SHSH is the single-pol HH mode observed in the inspected ASF granule.
         pol_map = {
-            "DHDH": ["HH"],
+            "SHSH": ["HH"],
+            "SVSV": ["VV"],
+            "DHDH": ["HH", "HV"],
             "DVVH": ["VV"],
             "DHHV": ["HH", "HV"],
             "DVHV": ["VV", "HV"],
-            "QHDV": ["HH", "HV", "VV", "VH"],
+            "QHDV": ["HH", "HV", "VH", "VV"],
         }
         return pol_map.get(self.pol_code, [])
 

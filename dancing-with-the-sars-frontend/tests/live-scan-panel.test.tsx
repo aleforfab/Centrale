@@ -13,6 +13,8 @@ describe("shared live scan panel", () => {
       const html = renderToStaticMarkup(<LiveScanPanel idPrefix="test" onBuilt={() => {}} />);
       expect(html).toContain('value="2026-08-13"');
       expect(html).toContain('value="2026-10-01"');
+      expect(html).toContain('aria-label="HH"');
+      expect(html).toContain('aria-label="HV"');
       expect(html).toContain("Fetch real observations");
       expect(fetchMock).not.toHaveBeenCalled();
     } finally { vi.unstubAllGlobals(); }

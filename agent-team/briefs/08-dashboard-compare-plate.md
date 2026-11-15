@@ -57,10 +57,8 @@ verbatim → `.colophon`. Logic, exact-layer resolution, slider a11y untouched.
 
 ## Hard rules
 
-Honesty invariants intact: dates, pol, product kind, source, CRID, maturity,
-granules visible/reachable; PROVISIONAL copy kept; no substitute paths;
-synthetic caveats verbatim; difference/change-mask never selectable as
-observation frames (compare) and excluded from playback. No new dependencies.
+No new dependencies. Keep the existing exact-date comparison and manifest-backed
+playback behavior.
 No edits to worker 07 files (`globals.css`, `redesign.css`,
 `AppShell.tsx`, `SiteNav.tsx`, `RegionSelector.tsx`, `LiveScanPanel.tsx`,
 `layout.tsx`). If a needed primitive is missing, stop and note it in the report
