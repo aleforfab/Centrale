@@ -185,7 +185,7 @@ export function WorldviewReview({ manifest, polarization }: { manifest: SiteMani
               <thead><tr><th>Acquisition date</th><th>Polarization</th><th>Product</th><th>CRID</th><th>Maturity</th><th>Source</th><th>Granule</th></tr></thead>
               <tbody>{frames.map((frame) => <tr key={`${frame.date}-${frame.layer.id}`}><td>{frame.date}</td><td>{frame.polarization}</td><td>{frame.layer.kind}</td><td>{frame.crid}</td><td>{frame.maturity}</td><td>{frame.source}</td><td style={{ fontFamily: "var(--font-mono)" }}>{frame.granule}</td></tr>)}</tbody>
             </table>
-            <p className="footnote mt-3">{manifest.site.caveat} Product maturity remains {manifest.source.maturity}; this UI does not claim validation or scientific review.</p>
+            <p className="footnote mt-3">Product maturity remains {manifest.source.maturity}; this UI does not claim validation or scientific review.</p>
           </div>}
         </div>
       </section>

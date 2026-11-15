@@ -296,6 +296,10 @@ class SiteSummary(BaseModel):
     date_range: list[str] = Field(..., description="Date range [start, end]")
     acquisition_count: int = Field(..., description="Number of acquisitions")
     pairs: list[dict[str, Any]] = Field(default_factory=list, description="List of pairs")
+    synthetic: bool = Field(
+        default=False,
+        description="True for synthetic rehearsal fixtures (not real observations)",
+    )
 
 
 class DataStatusResponse(BaseModel):

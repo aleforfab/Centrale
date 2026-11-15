@@ -7,7 +7,8 @@ import { CalendarReview } from "@/components/CalendarReview";
 import { SiteSelector } from "@/components/SiteSelector";
 import { fetchManifest } from "@/lib/liveFetch";
 import { api } from "@/lib/api";
-import type { SiteManifest, SiteSummary } from "@/lib/types";
+import { visibleSites, type SiteManifest, type SiteSummary } from "@/lib/types";
+import { initialSiteId, rememberSite } from "@/lib/siteChoice";
 
 export default function TimeMachinePage() {
   const [manifest, setManifest] = useState<SiteManifest | null>(null);
@@ -23,8 +24,10 @@ export default function TimeMachinePage() {
       .sites()
       .then((list) => {
         if (!active) return;
-        setSites(list);
-        setSiteId((current) => current || list.find((site) => site.id === "anak-krakatau")?.id || list[0]?.id || "");
+        // Synthetic rehearsal fixtures are not offered as a site choice.
+        const visible = visibleSites(list);
+        setSites(visible);
+        setSiteId((current) => current || initialSiteId(visible));
       })
       .catch((reason: unknown) => {
         if (active) setError(reason instanceof Error ? reason.message : "The installed product catalogue could not be loaded.");
@@ -36,6 +39,9 @@ export default function TimeMachinePage() {
       active = false;
     };
   }, []);
+
+  // Keep the chosen site in the URL so the dashboard opens on the same one.
+  useEffect(() => { if (siteId) rememberSite(siteId); }, [siteId]);
 
   useEffect(() => {
     if (!siteId) {
@@ -61,7 +67,7 @@ export default function TimeMachinePage() {
   }, [siteId]);
 
   const showBuiltSite = async (id: string) => {
-    const list = await api.sites();
+    const list = visibleSites(await api.sites());
     setSites(list);
     setSiteId(id);
     setManifest(await fetchManifest(id));

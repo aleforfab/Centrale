@@ -12,6 +12,8 @@ vi.mock("mapbox-gl", () => {
   class MockMap {
     handlers: Record<string, Function[]> = {};
     options: any;
+    sources: Record<string, any> = {};
+    mounted: Record<string, any> = {};
     setStyle = vi.fn();
     remove = vi.fn();
     on(event: string, cb: Function) { (this.handlers[event] ??= []).push(cb); }
@@ -19,7 +21,16 @@ vi.mock("mapbox-gl", () => {
     once() {}
     emit(event: string) { this.handlers[event]?.forEach((cb) => cb()); }
     fitBounds() {}
+    // Basemap tiles are still loading: a loaded-style gate would block rasters.
     isStyleLoaded() { return false; }
+    getStyle() { return { layers: Object.values(this.mounted), sources: this.sources }; }
+    getSource(id: string) { return this.sources[id]; }
+    getLayer(id: string) { return this.mounted[id]; }
+    addSource(id: string, source: any) { this.sources[id] = { ...source, setTiles: vi.fn() }; }
+    addLayer(layer: any) { this.mounted[layer.id] = layer; }
+    removeLayer(id: string) { delete this.mounted[id]; }
+    removeSource(id: string) { delete this.sources[id]; }
+    setPaintProperty = vi.fn();
     constructor(options: any) { this.options = options; state.maps.push(this); }
   }
   return { default: { accessToken: "", Map: MockMap } };
@@ -53,6 +64,13 @@ describe("before/after imagery controls", () => {
     fireEvent.click(screen.getByRole("button", { name: "Optical context" }));
     expect(setView).toHaveBeenCalledWith("optical");
     expect(state.maps.map((map) => map.setStyle.mock.calls.at(-1)?.[0])).toEqual(["optical-style", "optical-style"]);
-    expect(screen.getByText("Original caveat")).toBeTruthy();
+    // The removed disclaimer must not come back through the manifest caveat.
+    expect(screen.queryByText(/Original caveat/)).toBeNull();
+    // Regression: rasters mount on style.load even while basemap tiles load.
+    for (const map of state.maps) map.emit("style.load");
+    expect(Object.keys(state.maps[0].sources)).toContain("comparison-before");
+    expect(Object.keys(state.maps[1].sources)).toContain("comparison-after");
+    expect(state.maps[0].mounted["comparison-before-raster"]).toBeTruthy();
+    expect(state.maps[1].mounted["comparison-after-raster"]).toBeTruthy();
   });
 });

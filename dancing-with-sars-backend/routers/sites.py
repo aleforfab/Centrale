@@ -14,6 +14,19 @@ from nisar.models import Manifest, SiteSummary, TimeSeriesResponse
 router = APIRouter(prefix="/api/sites", tags=["NISAR sites"])
 SITE_ID_RE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 
+# Synthetic rehearsal fixtures (see scripts/make_demo_site.py) carry this
+# caveat prefix and title. They prove the pipeline runs but contain no
+# satellite observation, so the UI hides them from site selectors.
+SYNTHETIC_CAVEAT_PREFIX = "Synthetic fixture data"
+SYNTHETIC_TITLE_MARKER = "synthetic rehearsal"
+
+
+def _is_synthetic(manifest: Manifest) -> bool:
+    """True when the manifest describes a synthetic rehearsal fixture."""
+    caveat = (manifest.site.caveat or "").strip()
+    title = (manifest.site.title or "").strip().lower()
+    return caveat.startswith(SYNTHETIC_CAVEAT_PREFIX) or SYNTHETIC_TITLE_MARKER in title
+
 
 def _site_root(site_id: str) -> Path:
     if not SITE_ID_RE.fullmatch(site_id):
@@ -67,6 +80,7 @@ def list_sites() -> list[SiteSummary]:
             date_range=[dates[0], dates[-1]] if dates else [],
             acquisition_count=len(manifest.acquisitions),
             pairs=[pair.model_dump(mode="json") for pair in manifest.pairs],
+            synthetic=_is_synthetic(manifest),
         ))
     return summaries
 

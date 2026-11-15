@@ -23,7 +23,11 @@ it("groups installed products and starts with the newest observation", async () 
   expect((await screen.findByTestId("map-layers")).textContent).toBe("observation-2026-09-30");
   expect(screen.getByRole("heading", { name: "Radar observations" })).toBeTruthy();
   expect(screen.getByText("Measured change (4 pairs)")).toBeTruthy();
-  expect(screen.getAllByText("Manifest caveat").length).toBeGreaterThan(0);
+  // The PROVISIONAL/GCOV disclaimer (manifest caveat) was removed from the UI.
+  expect(screen.queryByText("Manifest caveat")).toBeNull();
+  // Masthead maturity chip and the plate's provenance caption are gone too.
+  expect(screen.queryByText("PROVISIONAL")).toBeNull();
+  expect(screen.queryByText("Installed dated radar products and their provenance.")).toBeNull();
   fireEvent.click(screen.getByText("2026-08-13 → 2026-08-25"));
   const drawMask = screen.getByLabelText("Draw 6 dB mask 2026-08-13 → 2026-08-25");
   fireEvent.click(drawMask);
