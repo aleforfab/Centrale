@@ -2,8 +2,7 @@ import Link from "next/link";
 
 const LINKS = [
   { href: "/", label: "Dashboard" },
-  { href: "/compare", label: "Before / after" },
-  { href: "/time-machine", label: "Time Machine" },
+  { href: "/time-machine", label: "Timeline & compare" },
   { href: "/method", label: "Method" },
 ];
 

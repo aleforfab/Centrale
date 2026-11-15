@@ -119,7 +119,14 @@ def _colourize(
         high = low + 1
     scaled = np.clip((values - low) / (high - low), 0, 1)
 
-    if kind == "difference":
+    if kind == "difference_diverging":
+        # Continuous symmetric ramp: white at zero, blue for lower return and
+        # red for higher return. Clip only the presentation, never the COG.
+        strength = np.clip(np.abs(values) / max(abs(low), abs(high)), 0, 1)[..., None]
+        neutral = np.array([245., 245., 245.])
+        endpoint = np.where((values < 0)[..., None], np.array([40., 120., 255.]), np.array([255., 82., 48.]))
+        colour = neutral * (1 - strength) + endpoint * strength
+    elif kind == "difference":
         strength = np.clip(np.abs(values) / max(abs(low), abs(high), 1), 0, 1)
         neutral = np.stack([245 - 40 * strength] * 3, axis=-1)
         blue = np.stack([45 * (1 - strength), 100 + 80 * (1 - strength), 210 + 45 * strength], axis=-1)

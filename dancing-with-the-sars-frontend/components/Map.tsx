@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { ProductLayer } from "@/lib/types";
 import { api } from "@/lib/api";
 import { resolveTileUrl } from "@/lib/tileUrl";
+import { setObservationPalette } from "@/lib/falseColor";
 import { getMapboxToken, hasMapboxToken } from "@/lib/mapboxToken";
 
 export type MapView = "optical" | "sar";
@@ -20,10 +21,13 @@ interface MapProps {
   layers: ProductLayer[];
   /**
    * Optional playback cursor. When set, the matching layer is visible and all
-   * other mounted product layers are hidden via `layout.visibility` — no
-   * source/layer removal or re-add, ever, while this prop changes.
+   * other mounted product layers are hidden via opacity — no source/layer removal or re-add while this prop changes.
    */
   activeLayerId?: string;
+  /** Display palette affects only grayscale observations, never masks or differences. */
+  falseColor?: boolean;
+  onFalseColorChange?: (enabled: boolean) => void;
+  onActiveLayerChange?: (layerId: string) => void;
   view: MapView;
   setView: (view: MapView) => void;
 }
@@ -118,7 +122,7 @@ function syncSiteFootprint(map: mapboxgl.Map, bbox: number[]) {
  * Runs on layer-set changes and after style reloads only — never per playback
  * tick. Existing layers get their opacity/visibility refreshed in place.
  */
-function syncProductLayers(map: mapboxgl.Map, layers: ProductLayer[], activeLayerId?: string) {
+function syncProductLayers(map: mapboxgl.Map, layers: ProductLayer[], activeLayerId: string | undefined, falseColor: boolean, urls: Map<string, string>) {
   const wantedLayerIds = new Set(layers.map((layer) => `${PRODUCT_LAYER_PREFIX}${layer.id}`));
   const wantedSourceIds = new Set(layers.map((layer) => `${PRODUCT_SOURCE_PREFIX}${layer.id}`));
   for (const existing of map.getStyle().layers ?? []) {
@@ -129,6 +133,7 @@ function syncProductLayers(map: mapboxgl.Map, layers: ProductLayer[], activeLaye
   for (const existing of Object.keys(map.getStyle().sources ?? {})) {
     if (existing.startsWith(PRODUCT_SOURCE_PREFIX) && !wantedSourceIds.has(existing)) {
       map.removeSource(existing);
+      urls.delete(existing);
     }
   }
 
@@ -137,11 +142,12 @@ function syncProductLayers(map: mapboxgl.Map, layers: ProductLayer[], activeLaye
     const layerId = `${PRODUCT_LAYER_PREFIX}${layer.id}`;
     const tileUrl = resolveTileUrl(layer.tile_url_template, api.baseUrl);
     const opacity = layer.kind === "difference" ? RASTER_OPACITY_DIFFERENCE : RASTER_OPACITY_OBSERVATION;
-    const visibility = activeLayerId == null || layer.id === activeLayerId ? "visible" : "none";
+    // Keep every playback source in use so Mapbox preloads its tiles.
+    const layerOpacity = activeLayerId == null || layer.id === activeLayerId ? opacity : 0;
 
     const source = map.getSource(sourceId) as mapboxgl.RasterTileSource | undefined;
     if (source) {
-      source.setTiles([tileUrl]);
+      if (urls.get(sourceId) !== tileUrl) source.setTiles([tileUrl]);
     } else {
       map.addSource(sourceId, {
         type: "raster",
@@ -152,9 +158,10 @@ function syncProductLayers(map: mapboxgl.Map, layers: ProductLayer[], activeLaye
       });
     }
 
+    urls.set(sourceId, tileUrl);
     if (map.getLayer(layerId)) {
-      map.setPaintProperty(layerId, "raster-opacity", opacity);
-      map.setLayoutProperty(layerId, "visibility", visibility);
+      map.setPaintProperty(layerId, "raster-opacity", layerOpacity);
+      if (layer.kind === "backscatter") setObservationPalette(map, layerId, falseColor);
       return;
     }
     // Insert each layer below its predecessor so the first entry in `layers`
@@ -165,15 +172,33 @@ function syncProductLayers(map: mapboxgl.Map, layers: ProductLayer[], activeLaye
       id: layerId,
       type: "raster",
       source: sourceId,
-      layout: { visibility },
-      paint: { "raster-opacity": opacity },
+      layout: { visibility: "visible" },
+      paint: { "raster-opacity": layerOpacity, "raster-opacity-transition": { duration: 0, delay: 0 }, "raster-fade-duration": 0 },
     }, beforeId);
+    if (layer.kind === "backscatter") setObservationPalette(map, layerId, falseColor);
   });
+  // A changed selection can reorder already-mounted layers. First entry is topmost.
+  for (const layer of [...layers].reverse()) {
+    const id = `${PRODUCT_LAYER_PREFIX}${layer.id}`;
+    if (map.getLayer(id)) map.moveLayer(id);
+  }
 }
 
-export const Map: React.FC<MapProps> = ({ bbox, layers, activeLayerId, view, setView }) => {
+export const Map: React.FC<MapProps> = ({ bbox, layers, activeLayerId, view, setView, falseColor: controlledColor, onFalseColorChange, onActiveLayerChange }) => {
+  const [localColor, setLocalColor] = useState(false);
+  const [shownId, setShownId] = useState(activeLayerId);
+  const falseColor = controlledColor ?? localColor;
+  const toggleColor = (enabled: boolean) => { setLocalColor(enabled); onFalseColorChange?.(enabled); };
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
+  const mountedStyle = useRef<string | mapboxgl.Style | null>(null);
+  const fallbackUsed = useRef(false);
+  const mountedUrls = useRef(new globalThis.Map<string, string>());
+  const displayedLayerId = useRef(activeLayerId);
+  const currentColor = useRef(falseColor);
+  currentColor.current = falseColor;
+  const currentOnActiveLayerChange = useRef(onActiveLayerChange);
+  currentOnActiveLayerChange.current = onActiveLayerChange;
   const currentLayers = useRef(layers);
   currentLayers.current = layers;
   const currentBbox = useRef(bbox);
@@ -183,9 +208,12 @@ export const Map: React.FC<MapProps> = ({ bbox, layers, activeLayerId, view, set
 
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
+    const initialStyle = styleForView(view);
+    mountedStyle.current = initialStyle;
+    fallbackUsed.current = !HAS_MAPBOX_TOKEN;
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: styleForView(view),
+      style: initialStyle,
       center: [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2],
       zoom: 5,
       attributionControl: false,
@@ -196,15 +224,21 @@ export const Map: React.FC<MapProps> = ({ bbox, layers, activeLayerId, view, set
     // layers + footprint) with the latest props after any style switch.
     const resyncOverlays = () => {
       if (!map.current) return;
-      syncProductLayers(map.current, currentLayers.current, currentActiveLayerId.current);
+      mountedUrls.current.clear();
+      displayedLayerId.current = currentActiveLayerId.current;
+      syncProductLayers(map.current, currentLayers.current, displayedLayerId.current, currentColor.current, mountedUrls.current);
+      setShownId(displayedLayerId.current);
+      if (displayedLayerId.current) currentOnActiveLayerChange.current?.(displayedLayerId.current);
       syncSiteFootprint(map.current, currentBbox.current);
     };
-    map.current.on("load", resyncOverlays);
     map.current.on("style.load", resyncOverlays);
     map.current.on("error", (event) => {
       const message = (event as { error?: Error }).error?.message ?? "";
-      if (map.current && /token|401|403|style|failed/i.test(message)) {
-        map.current.setStyle(FALLBACK_STYLE(true));
+      if (map.current && !fallbackUsed.current && /token|401|403|style/i.test(message)) {
+        fallbackUsed.current = true;
+        const fallback = FALLBACK_STYLE(true);
+        mountedStyle.current = fallback;
+        map.current.setStyle(fallback);
       }
     });
     return () => {
@@ -228,34 +262,66 @@ export const Map: React.FC<MapProps> = ({ bbox, layers, activeLayerId, view, set
     const currentMap = map.current;
     if (!currentMap) return;
     // The permanent style.load handler re-syncs all overlays once loaded.
-    currentMap.setStyle(styleForView(view));
+    if (fallbackUsed.current) return;
+    const nextStyle = styleForView(view);
+    if (mountedStyle.current === nextStyle) return;
+    mountedStyle.current = nextStyle;
+    currentMap.setStyle(nextStyle);
   }, [view]);
 
   // Layer-set reconciliation: add/remove only when the *set* changes, which
   // never happens during playback (callers memoize the mounted set).
   useEffect(() => {
     const currentMap = map.current;
-    if (!currentMap || !currentMap.isStyleLoaded()) return;
-    syncProductLayers(currentMap, layers, currentActiveLayerId.current);
+    if (!currentMap) return;
+    const reconcile = () => {
+      if (!currentMap.isStyleLoaded()) return;
+      currentMap.off("idle", reconcile);
+      if (currentActiveLayerId.current && !layers.some((item) => item.id === displayedLayerId.current)) displayedLayerId.current = currentActiveLayerId.current;
+      syncProductLayers(currentMap, layers, currentActiveLayerId.current ? displayedLayerId.current : undefined, currentColor.current, mountedUrls.current);
+      if (currentActiveLayerId.current && displayedLayerId.current) { setShownId(displayedLayerId.current); currentOnActiveLayerChange.current?.(displayedLayerId.current); }
+    };
+    if (currentMap.isStyleLoaded()) reconcile();
+    else currentMap.on("idle", reconcile);
+    return () => { currentMap.off("idle", reconcile); };
   }, [layers]);
 
-  // Playback cursor: flips `layout.visibility` on already-mounted layers only.
-  // No addSource/removeSource/addLayer/removeLayer/setTiles runs on this path.
+  // Keep the previous frame on screen until the requested source has loaded.
+  // All sources remain visible at zero opacity, so Mapbox can preload them.
   useEffect(() => {
     const currentMap = map.current;
-    if (!currentMap || !currentMap.isStyleLoaded()) return;
-    for (const layer of currentLayers.current) {
-      const layerId = `${PRODUCT_LAYER_PREFIX}${layer.id}`;
-      if (!currentMap.getLayer(layerId)) continue;
-      currentMap.setLayoutProperty(
-        layerId,
-        "visibility",
-        activeLayerId == null || layer.id === activeLayerId ? "visible" : "none",
-      );
-    }
-  }, [activeLayerId]);
+    if (!currentMap || !activeLayerId) return;
+    let cancelled = false;
+    const applyWhenReady = () => {
+      if (cancelled || !currentMap.isStyleLoaded() || !currentMap.getSource(`${PRODUCT_SOURCE_PREFIX}${activeLayerId}`)) return;
+      if (!currentMap.isSourceLoaded(`${PRODUCT_SOURCE_PREFIX}${activeLayerId}`) || !currentMap.areTilesLoaded()) return;
+      currentMap.off("idle", applyWhenReady);
+      for (const layer of currentLayers.current) {
+        const id = `${PRODUCT_LAYER_PREFIX}${layer.id}`;
+        if (currentMap.getLayer(id)) currentMap.setPaintProperty(id, "raster-opacity", layer.id === activeLayerId ? (layer.kind === "difference" ? RASTER_OPACITY_DIFFERENCE : RASTER_OPACITY_OBSERVATION) : 0);
+      }
+      displayedLayerId.current = activeLayerId;
+      setShownId(activeLayerId);
+      currentOnActiveLayerChange.current?.(activeLayerId);
+    };
+    currentMap.on("idle", applyWhenReady);
+    applyWhenReady();
+    return () => { cancelled = true; currentMap.off("idle", applyWhenReady); };
+  }, [activeLayerId, layers]);
 
-  const selectedLayer = (activeLayerId ? layers.find((layer) => layer.id === activeLayerId) : undefined) ?? layers[0] ?? null;
+  useEffect(() => {
+    const currentMap = map.current;
+    if (!currentMap) return;
+    const apply = () => {
+      if (!currentMap.isStyleLoaded()) return;
+      currentMap.off("idle", apply);
+      for (const layer of layers) if (layer.kind === "backscatter") setObservationPalette(currentMap, `${PRODUCT_LAYER_PREFIX}${layer.id}`, falseColor);
+    };
+    if (currentMap.isStyleLoaded()) apply(); else currentMap.on("idle", apply);
+    return () => { currentMap.off("idle", apply); };
+  }, [falseColor, layers]);
+
+  const selectedLayer = (activeLayerId ? layers.find((layer) => layer.id === shownId) : undefined) ?? layers[0] ?? null;
   const selectedTitle = activeLayerId
     ? selectedLayer?.title ?? "Selected frame"
     : layers.length > 1
@@ -281,7 +347,7 @@ export const Map: React.FC<MapProps> = ({ bbox, layers, activeLayerId, view, set
               backgroundSize: "48px 48px",
             }}
           />
-          <div className={`${CHIP} absolute right-14 top-3 max-w-[240px] px-2 py-1 text-[10px] leading-4`}>
+          <div className={`${CHIP} absolute right-14 top-14 max-w-[240px] px-2 py-1 text-[10px] leading-4`}>
             Local canvas: product tiles remain visible; Mapbox basemap needs a real token.
           </div>
         </>
@@ -303,15 +369,18 @@ export const Map: React.FC<MapProps> = ({ bbox, layers, activeLayerId, view, set
           </button>
         ))}
       </div>
+      <button type="button" aria-pressed={falseColor} onClick={() => toggleColor(!falseColor)} className={`${CHIP} ${CHIP_FOCUS} absolute right-14 top-3 px-2 py-1.5 text-[10px]`}>
+        False colour: {falseColor ? "on" : "off"}
+      </button>
       <aside
         className={`${CHIP} absolute bottom-[4.5rem] left-3 max-w-[min(320px,calc(100%-1.5rem))] sm:bottom-11 px-3 py-2.5 text-[10.5px] leading-[1.5]`}
         aria-label="Map legend"
       >
         <p className="mb-1 text-[11px] font-medium">{selectedTitle}</p>
-        <p className="opacity-80">Satellite basemap is visual context only, not a matched-date observation.{view !== "optical" ? ` ${selectedLayer?.legend ?? layerColor}` : ""}</p>
+        <p className="opacity-80">Satellite basemap is visual context only, not a matched-date observation. {falseColor && "Observation false colour: dark purple = weaker, pale yellow = stronger display brightness; not a colour composite. Difference and mask colours are unchanged."}{` ${falseColor && selectedLayer?.kind === "backscatter" ? "Observation brightness shown with a display palette." : selectedLayer?.legend ?? layerColor}`}{layers.some((item) => item.kind === "change_mask" && (!activeLayerId || item.id === shownId)) ? " Blue = lower return · Red = higher return." : ""}</p>
       </aside>
       <div className={`${CHIP} absolute bottom-10 right-3 px-2 py-1 text-[10px] leading-4`}>
-        {HAS_MAPBOX_TOKEN ? "Map imagery © Mapbox" : "Preview canvas · no external basemap"}
+        Map imagery © Mapbox{!HAS_MAPBOX_TOKEN && " · local canvas"}
       </div>
     </div>
   );

@@ -68,7 +68,7 @@ function selectedStats(layer: ProductLayer | null, manifest: SiteManifest | null
   const thresholds = pair?.stats[pol];
   if (!thresholds) return null;
   const threshold = layer.threshold_db === null || layer.threshold_db === undefined
-    ? Object.keys(thresholds)[0]
+    ? (thresholds["6"] ? "6" : Object.keys(thresholds)[0])
     : layer.threshold_db.toString();
   return thresholds[threshold] ?? null;
 }
@@ -139,7 +139,7 @@ export default function Home() {
       .then((siteList) => {
         if (!active) return;
         setSites(siteList);
-        setSiteId((current) => current || siteList[0]?.id || "");
+        setSiteId((current) => current || siteList.find((site) => site.id === "anak-krakatau")?.id || siteList[0]?.id || "");
       })
       .catch((reason: unknown) => {
         if (active) setError(errorMessage(reason));
@@ -167,9 +167,9 @@ export default function Home() {
         setManifest(siteManifest);
         const initialPol = siteManifest.polarizations[0]?.pol ?? "";
         setPolarization(initialPol);
-        const initialLayer = [...siteManifest.layers].reverse().find((item) => item.kind === "backscatter")
+        const initialLayer = [...siteManifest.layers].filter((item) => item.kind === "backscatter" && item.pol === initialPol).sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))[0]
           ?? siteManifest.layers[0];
-        setLayerSelection({ active: initialLayer?.id ?? "", visible: initialLayer ? [initialLayer.id] : [] });
+        setLayerSelection({ active: initialLayer?.id ?? "", visible: [] });
       })
       .catch((reason: unknown) => {
         if (active) setError(errorMessage(reason));
@@ -188,17 +188,17 @@ export default function Home() {
   );
   const layer = polLayers.find((item) => item.id === layerId) ?? polLayers[0] ?? null;
   const visibleLayers = useMemo(() => {
-    const active = polLayers.filter((item) => visibleLayerIds.includes(item.id));
-    return layer && active.includes(layer) ? [layer, ...active.filter((item) => item.id !== layer.id)] : active;
+    const overlays = polLayers.filter((item) => visibleLayerIds.includes(item.id) && item.id !== layer?.id);
+    return layer ? [...overlays, layer] : overlays;
   }, [layer, polLayers, visibleLayerIds]);
   const stats = selectedStats(layer, manifest, polarization);
 
   useEffect(() => {
     if (!layer || layer.id === layerId) return;
-    setLayerSelection((current) => ({ ...current, active: layer.id, visible: current.visible.includes(layer.id) ? current.visible : [...current.visible, layer.id] }));
+    setLayerSelection((current) => ({ ...current, active: layer.id }));
   }, [layer, layerId]);
 
-  const selectLayer = (id: string) => setLayerSelection((current) => ({ active: id, visible: current.visible.includes(id) ? current.visible : [...current.visible, id] }));
+  const selectLayer = (id: string) => setLayerSelection((current) => ({ ...current, active: id, visible: current.visible.filter((item) => item !== id) }));
   const selectAcquisition = (date: string) => {
     const backscatterLayer = polLayers.find((item) => item.kind === "backscatter" && item.date === date);
     if (backscatterLayer) selectLayer(backscatterLayer.id);
@@ -212,7 +212,7 @@ export default function Home() {
   const activePair = pairOf(layer, manifest);
   const activeWhen = layerWhen(layer, manifest);
   const activeThreshold = activePair && layer
-    ? layer.threshold_db ?? Object.keys(activePair.stats[polarization] ?? {})[0]
+    ? layer.threshold_db ?? (activePair.stats[polarization]?.["6"] ? "6" : Object.keys(activePair.stats[polarization] ?? {})[0])
     : null;
   const histogramPeak = stats ? Math.max(...stats.histogram, 1) : 1;
 
@@ -248,6 +248,11 @@ export default function Home() {
         <p className={`${FOOTNOTE} sm:ml-auto sm:text-right`}>Installed dated radar products and their provenance.</p>
       </div>
 
+      {manifest && <div className="mb-4 text-[13px] leading-5" role="status">
+        <strong>Measured backscatter change, exact dates.</strong> {manifest.acquisitions.map((a) => a.date).join(" · ")}
+        <p>{manifest.site.caveat}</p>
+        {manifest.site.id === "anak-krakatau" && <p>NASA reports lava reaching the western and southwestern coast during early September; this map shows radar return, not a mapped lava boundary. <a className={TEXT_LINK} href="https://www.earthdata.nasa.gov/news/worldview-image-archive/anak-krakatau-grows" target="_blank" rel="noreferrer">NASA Worldview: Anak Krakatau Grows ↗</a></p>}
+      </div>}
       <details className="mb-5 border-y border-[color:var(--hairline)] py-2.5">
         <summary className={`${LABEL} cursor-pointer`}>Fetch new observations (live)</summary>
         <div className="mt-4"><LiveScanPanel idPrefix="dashboard-scan" compact onBuilt={built} /></div>
@@ -354,56 +359,34 @@ export default function Home() {
             <RailSection id="rail-layers" tag="Layers" meta={`${polLayers.length} · ${polarization}`}>
               <fieldset className="m-0 min-w-0 border-0 p-0">
                 <legend className="sr-only">Layers</legend>
-                <p className="mt-2 px-4 text-[12px] leading-[1.5] text-[color:var(--ink-mute)]">
-                  Choose an active layer and toggle visibility independently. A hidden active layer remains selected.
-                </p>
-                <ul className="mt-2 px-4">
-                  {polLayers.map((item) => {
+                <p className="mt-2 px-4 text-[12px]">Radio: layer being drawn. Checkbox: extra overlay. The 6 dB mask is the recommended starting threshold; 2 dB can be dominated by open-water speckle.</p>
+                {(() => {
+                  const row = (item: ProductLayer) => {
                     const isActive = layer?.id === item.id;
-                    const isVisible = visibleLayerIds.includes(item.id);
-                    return (
-                      <li key={item.id} className={INDEX_ROW}>
-                        <div className={`${ROW} items-start gap-3 border-l-2 pl-2 ${isActive ? "border-[color:var(--accent)]" : "border-transparent"}`}>
-                          <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5">
-                            <input
-                              type="radio"
-                              name="active-layer"
-                              checked={isActive}
-                              onChange={() => selectLayer(item.id)}
-                              className="mt-[3px] shrink-0 accent-[color:var(--accent)]"
-                            />
-                            <span className="min-w-0">
-                              <span className={`${MONO} flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] leading-[1.4] text-[color:var(--ink)]`}>
-                                <span>{layerWhen(item, manifest) ?? "undated"}</span>
-                                <span aria-hidden="true">·</span>
-                                <span>{item.pol ?? "all pols"}</span>
-                                <span className={CHIP}>{kindLabel(item.kind)}</span>
-                              </span>
-                              <span className={`mt-1 block text-[13px] leading-[1.35] ${isActive ? "font-semibold text-[color:var(--ink)]" : "text-[color:var(--ink-soft)]"}`}>
-                                {item.title ?? item.id}{isActive && !isVisible ? " (hidden)" : ""}
-                              </span>
-                            </span>
-                          </label>
-                          <label className={`${MONO} flex shrink-0 cursor-pointer items-center gap-1.5 text-[10px] uppercase leading-[1.4] tracking-[0.14em] text-[color:var(--ink-mute)]`}>
-                            <input
-                              type="checkbox"
-                              checked={isVisible}
-                              onChange={(event) => setLayerSelection((current) => ({ ...current, visible: event.target.checked ? [...current.visible.filter((id) => id !== item.id), item.id] : current.visible.filter((id) => id !== item.id) }))}
-                              className="accent-[color:var(--accent)]"
-                            />
-                            Visible
-                          </label>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-                {layer?.legend && (
-                  <p className={`${FOOTNOTE} mt-3 px-4`}>
-                    <span className="uppercase tracking-[0.14em] text-[color:var(--ink-soft)]">Legend</span>
-                    {" — "}{layer.legend}
-                  </p>
-                )}
+                    return <li key={item.id} className={INDEX_ROW}>
+                      <div className={`${ROW} items-start gap-3`}>
+                        <label className="flex min-w-0 flex-1 items-start gap-2">
+                          <input type="radio" name="active-layer" aria-label={`Draw ${item.kind === "backscatter" ? "observation" : item.kind === "difference" ? "difference" : `${item.threshold_db} dB mask`} ${layerWhen(item, manifest) ?? ""}`} checked={isActive} onChange={() => selectLayer(item.id)} className="mt-1 accent-[color:var(--accent)]" />
+                          <span><span className="sr-only">Draw </span>{item.kind === "backscatter" ? `${item.date} · ${item.pol}` : item.kind === "difference" ? "Difference" : `${item.threshold_db} dB mask`}</span>
+                        </label>
+                        <label className={`${MONO} shrink-0 text-[10px] uppercase`}>
+                          <input type="checkbox" checked={visibleLayerIds.includes(item.id)} disabled={isActive} onChange={(event) => setLayerSelection((current) => ({ ...current, visible: event.target.checked ? [...current.visible.filter((id) => id !== item.id), item.id] : current.visible.filter((id) => id !== item.id) }))} /> Extra overlay<span className="sr-only"> {item.title ?? item.id}</span>
+                        </label>
+                      </div>
+                    </li>;
+                  };
+                  const observations = polLayers.filter((item) => item.kind === "backscatter");
+                  return <div className="px-4 mt-3">
+                    <h3 className={LABEL}>Observations ({observations.length})</h3>
+                    <ul>{observations.map(row)}</ul>
+                    <h3 className={`${LABEL} mt-4`}>Measured change ({manifest.pairs.length} pairs)</h3>
+                    {manifest.pairs.map((pair) => {
+                      const products = polLayers.filter((item) => item.pair_id === pair.id).sort((a, b) => a.kind === "difference" ? -1 : b.kind === "difference" ? 1 : (b.threshold_db ?? 0) - (a.threshold_db ?? 0));
+                      return <details key={pair.id}><summary className="cursor-pointer py-2 text-[13px]">{pairDates(pair).pre} → {pairDates(pair).post}</summary><ul className="pl-3">{products.map(row)}</ul></details>;
+                    })}
+                  </div>;
+                })()}
+                {visibleLayers.some((item) => item.kind === "change_mask") && <p className={`${FOOTNOTE} mt-3 px-4`}>Blue = lower return · Red = higher return. Masks are categorical.</p>}
               </fieldset>
             </RailSection>
 
@@ -465,7 +448,7 @@ export default function Home() {
             {manifest.pairs.length > 0 && (
               <RailSection id="rail-measured-change" tag="Measured change" meta={stats && activeThreshold != null ? `±${activeThreshold} dB` : undefined}>
                 <div className="px-4">
-                  {stats ? (
+                  {stats && Number(activeThreshold) !== 2 ? (
                     <>
                       <table className={`${RULE_TABLE} mt-3`}>
                         <caption className={`${MONO} pb-2 text-left text-[11px] leading-[1.5] text-[color:var(--ink-soft)]`}>
@@ -507,7 +490,7 @@ export default function Home() {
                     </>
                   ) : (
                     <p className={`${FOOTNOTE} mt-3`}>
-                      No pair product is active. Select a difference or change-mask layer under Layers to read its measured statistics.
+                      {Number(activeThreshold) === 2 ? "The 2 dB mask can be dominated by open-water speckle; select 6 dB to review statistics." : "No pair product is active. Select a difference or change-mask layer under Layers to read its measured statistics."}
                     </p>
                   )}
                 </div>

@@ -48,11 +48,9 @@ export function AppShell({
                 {subtitle && <span className="app-shell__subtitle">{subtitle}</span>}
               </span>
             </Link>
-            {status && (
-              <div className="app-shell__status" role="status">
-                {status}
-              </div>
-            )}
+            <div className="app-shell__status" role="status">
+              <span className="tm-chip">PROVISIONAL</span> {status}
+            </div>
           </div>
           <SiteNav current={current} />
         </header>

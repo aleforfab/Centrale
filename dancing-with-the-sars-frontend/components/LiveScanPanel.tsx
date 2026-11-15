@@ -109,5 +109,5 @@ export function LiveScanPanel({ idPrefix, defaultBbox = DEFAULT_BBOX, onBuilt, c
 
 export function BuiltProductsBanner({ manifest }: { manifest: import("@/lib/types").SiteManifest }) {
   const pols = observationPolarizations(manifest);
-  return <div className="colophon mb-4" role="status"><strong>PROVISIONAL products.</strong> Exact backscatter dates present: {pols.map((pol) => `${pol}: ${observationDates(manifest, pol).join(", ") || "none"}`).join(" · ") || "none"}. {manifest.site.caveat} Missing dates stay missing; difference and change-mask products are excluded from playback and comparison.</div>;
+  return <div className="colophon mb-4" role="status"><strong>PROVISIONAL products.</strong> Exact backscatter dates present: {pols.map((pol) => `${pol}: ${observationDates(manifest, pol).join(", ") || "none"}`).join(" · ") || "none"}. {manifest.site.caveat} Missing dates stay missing; playback and calendar comparisons use observation layers only. Curated pair comparisons can show installed change products.</div>;
 }
